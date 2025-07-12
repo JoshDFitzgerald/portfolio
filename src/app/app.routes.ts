@@ -8,5 +8,6 @@ export const routes: Routes = [
     { path: 'travel', loadComponent: () => import('./travel/travel.component').then(m => m.TravelComponent) },
     { path: 'about', loadComponent: () => import('./about/about.component').then(m => m.AboutComponent) },
     { path: 'contact', loadComponent: () => import('./contact/contact.component').then(m => m.ContactComponent) },
+    { path: 'pandemic-estimation', loadComponent: () => import('./pandemic-estimation-article/pandemic-estimation-article.component').then(m => m.PandemicEstimationArticleComponent) },
     { path: '', redirectTo: '/home', pathMatch: 'full' },
 ];

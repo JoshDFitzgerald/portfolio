@@ -34,14 +34,14 @@ export class WorksService {
       tags: ['Vue.js', 'Python', 'Django']
     },
     {
-      title: 'Publication A',
+      title: 'Pandemic Intensity Estimation using Dynamic Factor Modeling',
       type: 'Publication',
       imageUrl: 'https://via.placeholder.com/300x200?text=Publication+A',
-      url: '#',
+      url: '/pandemic-estimation',
       timestamp: new Date('2024-02-10'),
-      publicationPlatform: 'Journal of Science',
+      publicationPlatform: 'Statistics, Politics and Policy',
       year: 2024,
-      description: 'An article about scientific discoveries.'
+      description: 'This paper suggests using a restricted data-rich dynamic factor model to provide a comprehensive measurement of disease intensity, evaluating vaccination efficacy and offering an open-source Python package for future research.'
     },
     {
       title: 'Article X',

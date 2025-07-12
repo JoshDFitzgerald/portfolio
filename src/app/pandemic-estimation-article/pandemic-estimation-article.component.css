@@ -1,0 +1,109 @@
+/* Article Section */
+section {
+  padding: 80px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+section h2 {
+  font-size: 2.8em;
+  color: var(--color-text-primary);
+  margin-bottom: 40px;
+  position: relative;
+  display: inline-block;
+}
+
+section h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -10px;
+  width: 80px;
+  height: 4px;
+  background-color: var(--color-accent-blue);
+  border-radius: 2px;
+}
+
+.article-meta {
+  font-size: 0.9em;
+  color: var(--color-text-secondary);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.article-meta p {
+  margin: 5px 0;
+}
+
+.article-content {
+  text-align: left;
+  font-size: 1.1em;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+}
+
+.article-content p {
+  margin-bottom: 1em;
+}
+
+.article-content ul {
+  list-style: disc;
+  margin-left: 20px;
+  margin-bottom: 1em;
+}
+
+.article-content li {
+  margin-bottom: 0.5em;
+}
+
+.article-content h3 {
+  font-size: 1.4em; /* Slightly smaller than main headings */
+  color: var(--color-text-primary);
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-weight: 600; /* Slightly less bold */
+}
+
+.abstract-section {
+  padding: 0 20px; /* Keep padding for readability, remove box */
+  margin-bottom: 20px;
+}
+
+.abstract-section p {
+  font-style: italic;
+  color: var(--color-text-secondary); /* Use secondary text color for abstract */
+}
+
+.read-full-article-button {
+  display: inline-block;
+  background-color: var(--color-accent-blue);
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: var(--font-family-heading);
+  font-weight: 700;
+  margin-top: 20px;
+}
+
+.read-full-article-button:hover {
+  background-color: var(--color-accent-blue-hover);
+}
+
+/* Scroll Animation (re-using global scroll-animation from styles.css) */
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  section h2 {
+    font-size: 2.2em;
+  }
+
+  .article-content {
+    font-size: 1em;
+  }
+}
