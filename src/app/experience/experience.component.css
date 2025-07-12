@@ -1,0 +1,217 @@
+/* Experience Section */
+section {
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+section h2 {
+  font-size: 2.8em;
+  color: var(--color-text-primary);
+  margin-bottom: 40px;
+  position: relative;
+  display: inline-block;
+}
+
+section h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -10px;
+  width: 80px;
+  height: 4px;
+  background-color: var(--color-accent-blue);
+  border-radius: 2px;
+}
+
+.timeline {
+  position: relative;
+  max-width: 1100px; /* Consistent with homepage max-width */
+  margin: 0 auto;
+  padding: 50px 0;
+}
+
+.timeline::after {
+  content: '';
+  position: absolute;
+  width: 2px; /* Thinner line */
+  background-color: #D3D3D3; /* Mid Grey for the unfilled base line */
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -1px;
+  z-index: -1;
+}
+
+.timeline-fill-line {
+  position: absolute;
+  width: 2px; /* Thinner line */
+  background-color: var(--color-accent-blue); /* Ocean Greyish Blue accent for the filled part */
+  top: 0;
+  left: 50%;
+  margin-left: -1px;
+  z-index: 0;
+  height: 0;
+  transition: height 0.2s linear; /* Smoother transition for filling */
+}
+
+/* Pop animation at the bottom of the fill line */
+.timeline-fill-line.pop-active::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 20px;
+  height: 20px;
+  background-color: var(--color-accent-blue); /* Ocean Greyish Blue accent for the pop */
+  border-radius: 50%;
+  opacity: 0;
+  animation: pop-effect 0.5s ease-out forwards;
+}
+
+@keyframes pop-effect {
+  0% {
+    transform: translateX(-50%) scale(0); 
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(1.5); 
+    opacity: 0;
+  }
+}
+
+.timeline-item {
+  padding: 40px 0;
+  position: relative;
+  width: 50%;
+  box-sizing: border-box;
+}
+
+.timeline-item:nth-child(odd) {
+  left: 0;
+  padding-right: 60px;
+}
+
+.timeline-item:nth-child(even) {
+  left: 50%;
+  padding-left: 60px;
+}
+
+.timeline-dot {
+  position: absolute;
+  width: 16px; /* Slightly smaller dot */
+  height: 16px;
+  background-color: var(--color-background-primary); /* Off-white background */
+  border: 2px solid var(--color-accent-blue); /* Ocean Greyish Blue accent border */
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.timeline-item:nth-child(odd) .timeline-dot {
+  right: -8px; /* Adjust position for smaller dot */
+}
+
+.timeline-item:nth-child(even) .timeline-dot {
+  left: -8px; /* Adjust position for smaller dot */
+}
+
+.timeline-content {
+  background-color: white; /* White background */
+  padding: 30px;
+  border-radius: 8px; /* Consistent with cards */
+  border: 1px solid #D3D3D3; /* Thin Mid Grey border */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Softer initial shadow */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.timeline-content:hover {
+  transform: translateY(-8px); /* Less pronounced lift */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* More subtle hover shadow */
+  background-color: #F0F4F6; /* Light background tint on hover */
+}
+
+.timeline-content h2 {
+  font-family: var(--font-family-heading);
+  margin-top: 0;
+  font-size: 1.8em;
+  font-weight: 700; /* Bold */
+  color: var(--color-text-primary);
+}
+
+.timeline-content h3 {
+  font-family: var(--font-family-heading);
+  font-size: 1.2em;
+  font-weight: 400;
+  color: var(--color-accent-blue); /* Ocean Greyish Blue for company names */
+  margin-bottom: 15px;
+}
+
+.timeline-content ul {
+  list-style: none;
+  padding: 0;
+}
+
+.timeline-content li {
+  font-family: var(--font-family-body);
+  font-size: 1em;
+  font-weight: 400;
+  margin-bottom: 10px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+}
+
+.timeline-date {
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  color: var(--color-text-secondary); /* Medium grey for date */
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Scroll animation (re-using global scroll-animation from styles.css) */
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .timeline::after {
+    left: 20px;
+  }
+
+  .timeline-fill-line {
+    left: 20px;
+  }
+
+  .timeline-item {
+    width: 100%;
+    padding-left: 60px;
+    padding-right: 20px;
+  }
+
+  .timeline-item:nth-child(odd),
+  .timeline-item:nth-child(even) {
+    left: 0;
+    padding-right: 20px;
+  }
+
+  .timeline-dot {
+    left: 10px;
+    transform: translateY(-50%);
+  }
+
+  .timeline-item:nth-child(odd) .timeline-dot,
+  .timeline-item:nth-child(even) .timeline-dot {
+    right: unset;
+  }
+
+  .timeline-date {
+    position: relative;
+    top: unset;
+    left: unset;
+    text-align: left;
+    margin-bottom: 5px;
+  }
+}

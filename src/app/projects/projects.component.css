@@ -1,0 +1,101 @@
+/* Projects Component Styles */
+:host {
+  display: block;
+}
+
+/* Projects Section (re-using global section styles from styles.css) */
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.project-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  text-align: left;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #eee;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+
+.project-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.project-image {
+  width: 100%;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(100%);
+  transition: filter 0.3s ease;
+}
+
+.project-card:hover .project-image {
+  filter: grayscale(0%);
+}
+
+.project-content {
+  padding: 20px;
+}
+
+.project-content h3 {
+  font-size: 1.8em;
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--color-text-primary);
+}
+
+.project-description {
+  font-size: 1em;
+  color: var(--color-text-secondary);
+  margin-bottom: 15px;
+}
+
+.project-tags {
+  margin-bottom: 15px;
+}
+
+.tag {
+  display: inline-block;
+  background-color: #e9ecef; /* Light grey for tags */
+  color: var(--color-text-secondary);
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.view-case-study-button {
+  background-color: var(--color-accent-blue);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: var(--font-family-heading);
+  font-weight: 700;
+}
+
+.view-case-study-button:hover {
+  background-color: var(--color-accent-blue-hover);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,12 @@
+<section class="travel-section">
+  <h2 class="scroll-animation" #scrollAnimation>Travel Experiences</h2>
+  <div class="travel-grid">
+    <div class="travel-item scroll-animation" #scrollAnimation *ngFor="let item of travelItems">
+      <img [src]="item.imageUrl" alt="{{ item.location }}" class="travel-image">
+      <div class="travel-overlay">
+        <p class="travel-location">{{ item.location }}</p>
+        <p class="travel-description">{{ item.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>

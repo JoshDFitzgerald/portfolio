@@ -1,0 +1,16 @@
+<section class="projects-section">
+  <h2 class="scroll-animation" #scrollAnimation>Featured Projects</h2>
+  <div class="project-grid">
+    <a *ngFor="let project of projects" [href]="project.url" class="project-card scroll-animation" #scrollAnimation>
+      <div class="project-image" [style.background-image]="'url(' + project.imageUrl + ')'"></div>
+      <div class="project-content">
+        <h3>{{ project.title }}</h3>
+        <p class="project-description">{{ project.description }}</p>
+        <div class="project-tags">
+          <span *ngFor="let tag of project.tags" class="tag">{{ tag }}</span>
+        </div>
+        <button class="view-case-study-button">View Case Study</button>
+      </div>
+    </a>
+  </div>
+</section>

@@ -1,0 +1,23 @@
+<div class="hero-section">
+  <div class="hero-content">
+    <h1 class="scroll-animation" #scrollAnimation>Josh Fitzgerald</h1>
+    <p class="scroll-animation" #scrollAnimation>Product Manager & Data Scientist</p>
+    <button class="cta-button scroll-animation" #scrollAnimation>View My Work</button>
+  </div>
+</div>
+
+<section class="about-preview">
+  <h2 class="scroll-animation" #scrollAnimation>About Me</h2>
+  <p class="scroll-animation" #scrollAnimation>Brief introduction about skills, interests, and what drives me. This will be a short summary leading to the full About page.</p>
+  <a href="/about" class="read-more scroll-animation" #scrollAnimation>Read More</a>
+</section>
+
+<section class="featured-works">
+  <h2 class="scroll-animation" #scrollAnimation>Projects</h2>
+  <div class="work-grid">
+    <div class="work-card scroll-animation" #scrollAnimation *ngFor="let work of featuredWorks">
+      <h3>{{ work.title }}</h3>
+      <p>{{ work.type }} - {{ work.timestamp | date:'shortDate' }}</p>
+    </div>
+  </div>
+  </section>

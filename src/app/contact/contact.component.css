@@ -1,0 +1,74 @@
+/* Contact Section */
+section {
+  padding: 80px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+section h2 {
+  font-size: 2.8em;
+  color: var(--color-text-primary);
+  margin-bottom: 40px;
+  position: relative;
+  display: inline-block;
+}
+
+section h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -10px;
+  width: 80px;
+  height: 4px;
+  background-color: var(--color-accent-blue);
+  border-radius: 2px;
+}
+
+.contact-section p {
+  font-size: 1.1em;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin-bottom: 40px;
+}
+
+.contact-links {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.contact-button {
+  background-color: var(--color-accent-blue);
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  font-family: var(--font-family-heading);
+  font-weight: 700;
+}
+
+.contact-button:hover {
+  background-color: var(--color-accent-blue-hover);
+}
+
+/* Scroll Animation (re-using global scroll-animation from styles.css) */
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  section h2 {
+    font-size: 2.2em;
+  }
+
+  .contact-links {
+    flex-direction: column;
+    gap: 15px;
+  }
+}

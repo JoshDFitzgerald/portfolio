@@ -1,0 +1,14 @@
+<section class="publications-section">
+  <h2 class="scroll-animation" #scrollAnimation>Publications & Articles</h2>
+  <div class="publication-list">
+    <div class="publication-item scroll-animation" #scrollAnimation *ngFor="let publication of publications">
+      <h3>{{ publication.title }}</h3>
+      <p class="publication-meta">
+        <span *ngIf="publication.publicationPlatform">{{ publication.publicationPlatform }}</span>
+        <span *ngIf="publication.year">, {{ publication.year }}</span>
+      </p>
+      <p class="publication-description">{{ publication.description }}</p>
+      <a [href]="publication.url" target="_blank" class="read-article-link">Read Article</a>
+    </div>
+  </div>
+</section>
