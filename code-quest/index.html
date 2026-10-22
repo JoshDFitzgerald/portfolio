@@ -1,0 +1,2108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Josh's Code Quest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen game. Quest scene = pixel map letterboxed on a Sonoran-dusk frame with HUD on top and an RPG text box over the map.
+   Robot Lab scene = scrolling light "lab bench" page. Deliberately single-theme (projector-friendly), every color set explicitly. */
+:root {
+  --ink: #221a38;
+  --dusk: #2a2146;
+  --dusk-2: #3a2d60;
+  --dusk-3: #4b3b78;
+  --dusk-text: #f6ead6;
+  --paper: #edf2f5;
+  --card: #ffffff;
+  --line: #cbd5de;
+  --muted: #586276;
+  --turq: #13a59f;
+  --turq-deep: #0b7570;
+  --turq-pale: #d6f2ef;
+  --sun: #ff7a3d;
+  --sun-deep: #d9561c;
+  --sand: #f1cf98;
+  --w-green: #57a54b;
+  --w-yellow: #d2a92a;
+  --w-gray: #7a808b;
+  --font-display: 'Pixelify Sans', 'Courier New', monospace;
+  --font-body: 'Lexend', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--dusk);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.scene { height: 100%; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 600; letter-spacing: .04em;
+  font-size: 16px; line-height: 1; padding: 10px 14px;
+  border: 3px solid var(--ink); border-radius: 0;
+  background: var(--card); color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 var(--ink); }
+.btn-sun { background: var(--sun); color: var(--ink); }
+.btn-turq { background: var(--turq); color: #fff; }
+.btn-ghost { background: transparent; color: var(--dusk-text); border-color: var(--dusk-text); box-shadow: 0 4px 0 #120d24; }
+.btn-big { font-size: 22px; padding: 16px 22px; }
+
+/* ---------- quest scene ---------- */
+#quest { display: flex; flex-direction: column; background: radial-gradient(120% 80% at 50% 0%, var(--dusk-3), var(--dusk) 60%); }
+.hud {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding-block: 10px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  color: var(--dusk-text);
+}
+.brand { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.brand span { color: var(--sun); }
+.levels { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.lvl {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display); font-size: 14px; letter-spacing: .03em;
+  color: var(--dusk-text); background: var(--dusk-2);
+  border: 2px solid #5a4a8a; padding: 4px 8px 4px 4px;
+}
+.lvl .num {
+  display: inline-grid; place-items: center; width: 20px; height: 20px;
+  background: #5a4a8a; color: var(--dusk-text); font-weight: 700;
+}
+.lvl.done { border-color: var(--sun); }
+.lvl.done .num { background: var(--sun); color: var(--ink); }
+.lvl.next { border-color: var(--turq); box-shadow: 0 0 0 2px var(--turq) inset; }
+.hud-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hud .btn { font-size: 14px; padding: 8px 12px; }
+.hud-actions { align-items: center; }
+
+.stage {
+  position: relative; flex: 1 1 auto; min-height: 0;
+  display: grid; place-items: center;
+  padding-bottom: 12px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+}
+.board { overflow: hidden; position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; container-type: inline-size; box-shadow: 0 0 0 4px var(--ink), 0 0 0 8px #5a4a8a, 0 18px 40px rgba(10, 6, 25, .55); background: #1a1530; }
+#map:focus { outline: none; }
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.fx-glow { mix-blend-mode: screen; }
+.hud #nextBtn { font-size: clamp(18px, 1.9vw, 26px); padding: 14px 26px; border-width: 4px; box-shadow: 0 6px 0 #120d24; }
+.hud #nextBtn.ready { animation: readyPulse 1.2s ease-in-out infinite; }
+@keyframes readyPulse { 0%, 100% { box-shadow: 0 6px 0 #120d24, 0 0 0 0 rgba(255, 122, 61, .7); } 50% { box-shadow: 0 6px 0 #120d24, 0 0 0 10px rgba(255, 122, 61, 0); } }
+#map { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.tag {
+  position: absolute; transform: translate(-50%, -100%);
+  font-family: var(--font-display); font-weight: 700; letter-spacing: .05em;
+  font-size: calc(clamp(7px, 1.25cqw, 15px) * var(--z, 1)); line-height: 1;
+  color: var(--ink); background: #fff7e8; border: 2px solid var(--ink);
+  padding: .25em .45em; white-space: nowrap;
+}
+.tag.done { background: var(--sun); }
+.tag.info { background: #e2ecf2; font-weight: 500; }
+.tag.next { background: var(--turq); color: #fff; }
+.tag.locked { background: #3a2d60; color: #b9acd9; border-color: #1a1530; }
+.lvl.locked { opacity: .5; cursor: not-allowed; }
+.lvl.here { background: var(--dusk-text); color: var(--ink); }
+.plate { position: absolute; left: 10px; bottom: 10px; z-index: 2; font-family: var(--font-display); font-size: clamp(11px, 1.5cqw, 18px); color: #fff; background: rgba(26, 21, 48, .82); border: 2px solid var(--sun); padding: .3em .6em; letter-spacing: .06em; pointer-events: none; }
+.plate b { color: var(--sun); margin-right: .4em; }
+.stars { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--ink); background: #ffd23f; border: 3px solid var(--ink); padding: 4px 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stars .star { color: var(--sun-deep); }
+.stars.pop { animation: pop .6s; }
+@keyframes pop { 30% { transform: scale(1.35) rotate(-4deg); } 60% { transform: scale(.95); } }
+.dlg-quiz { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; margin-top: 4px; }
+.opt { display: flex; align-items: center; gap: 12px; text-align: left; font-family: var(--font-body); font-weight: 600; font-size: clamp(16px, 1.8vw, 24px); line-height: 1.2; padding: 10px 14px; border: 3px solid var(--ink); background: #fff; color: var(--ink); box-shadow: 0 4px 0 var(--ink); }
+.opt:hover:not(:disabled) { background: var(--turq-pale); }
+.opt .k { flex: none; display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; font-family: var(--font-display); background: var(--ink); color: #fff; }
+.opt.right { background: var(--w-green); color: #fff; }
+.opt.right .k { background: #fff; color: var(--w-green); }
+.opt.wrong { background: #ffd9cf; color: #9a3a1e; text-decoration: line-through; box-shadow: none; transform: translateY(4px); }
+.opt.shake { animation: shake .35s; }
+.opt:disabled { cursor: default; }
+.statcard { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(26, 21, 48, .6); padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+.stat-box { width: min(1000px, 100%); background: #fffaf0; border: 4px solid var(--ink); box-shadow: 0 0 0 4px #fffaf0, 0 0 0 8px var(--ink), 0 18px 40px rgba(10, 6, 25, .5); padding: 22px 26px 26px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+.stat-eyebrow { font-family: var(--font-display); letter-spacing: .25em; text-transform: uppercase; color: var(--sun-deep); font-size: clamp(14px, 1.6vw, 20px); }
+.stat-num { font-family: var(--font-display); font-weight: 700; font-size: clamp(44px, 7.2vw, 132px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); text-shadow: 0 6px 0 var(--turq-pale); max-width: 100%; overflow-wrap: anywhere; }
+.statcard.landed .stat-num { color: var(--turq-deep); animation: pop .6s; }
+.stat-label { font-size: clamp(18px, 2.3vw, 32px); font-weight: 700; text-wrap: balance; }
+.stat-compare { margin: 0 0 6px; font-size: clamp(16px, 1.9vw, 24px); color: var(--muted); max-width: 40ch; text-wrap: balance; }
+.banner { position: absolute; left: 0; right: 0; top: 40%; z-index: 4; pointer-events: none; }
+.bn-strip { background: var(--ink); color: #fff; text-align: center; padding-block: 16px; border-block: 5px solid var(--sun); display: grid; gap: 6px; }
+.banner.go .bn-strip { animation: bannerIn 1.7s both; }
+@keyframes bannerIn { 0% { transform: scaleY(0); opacity: 0; } 14% { transform: scaleY(1); opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+.bn-level { font-family: var(--font-display); letter-spacing: .35em; color: var(--sun); font-size: clamp(14px, 1.9vw, 24px); }
+.bn-name { font-family: var(--font-display); font-weight: 700; font-size: clamp(32px, 6vw, 84px); line-height: 1; letter-spacing: .04em; }
+.toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 6; background: var(--ink); color: #fff; font-family: var(--font-display); font-size: 18px; padding: 8px 14px; border: 3px solid var(--sun); white-space: nowrap; }
+.linkbtn { background: none; border: 0; color: #c9bde6; text-decoration: underline; font-size: 15px; padding: 4px; }
+
+/* RPG text box */
+.dialog {
+  position: absolute; left: 50%; bottom: 22px; z-index: 3; transform: translateX(-50%);
+  width: min(960px, calc(100% - 32px));
+  background: #fffaf0; color: var(--ink);
+  border: 4px solid var(--ink);
+  box-shadow: 0 0 0 4px #fffaf0, 0 0 0 8px var(--ink), 0 14px 30px rgba(10, 6, 25, .5);
+  padding: 18px 22px 16px 22px;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: start;
+  cursor: pointer; user-select: none;
+}
+.dlg-face { grid-row: 1 / span 4; width: clamp(64px, 8vw, 108px); aspect-ratio: 1; image-rendering: pixelated; background: var(--turq-pale); border: 3px solid var(--ink); }
+.dlg-name { font-family: var(--font-display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--turq-deep); font-size: clamp(14px, 1.5vw, 20px); }
+.dlg-text { font-size: clamp(18px, 2.1vw, 28px); line-height: 1.38; font-weight: 500; min-height: 2.8em; max-width: 46ch; text-wrap: pretty; }
+.dlg-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 28px; }
+.dlg-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.dlg-more { font-family: var(--font-display); font-size: 14px; color: var(--muted); margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.dlg-more i { display: inline-block; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--sun-deep); animation: bob .7s steps(2) infinite; }
+@keyframes bob { 50% { transform: translateY(3px); } }
+
+/* title card */
+.title-card {
+  position: absolute; inset: 0; z-index: 4; display: grid; place-items: center;
+  background: linear-gradient(180deg, rgba(42, 33, 70, .78), rgba(42, 33, 70, .9));
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  text-align: center; color: var(--dusk-text);
+}
+.title-inner { display: grid; gap: 18px; justify-items: center; max-width: 760px; }
+.title-kicker { font-family: var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: var(--sand); font-size: clamp(13px, 1.6vw, 18px); }
+.title-big { font-family: var(--font-display); font-weight: 700; font-size: clamp(40px, 8vw, 104px); line-height: .92; margin: 0; letter-spacing: .02em; text-wrap: balance; text-shadow: 0 6px 0 var(--ink), 0 -3px 0 var(--turq); }
+.title-big em { font-style: normal; color: var(--sun); }
+.title-sub { font-size: clamp(16px, 2vw, 24px); margin: 0; max-width: 34ch; color: #efe2ff; }
+.title-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.title-tip { font-size: 14px; color: #c9bde6; margin: 0; }
+kbd { font-family: var(--font-display); background: var(--dusk-2); border: 2px solid #6b5a9e; padding: 1px 6px; color: var(--dusk-text); }
+
+/* touch d-pad */
+.dpad {
+  position: fixed; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: none; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 4px; z-index: 5;
+}
+.dpad button { background: rgba(255, 250, 240, .9); border: 3px solid var(--ink); color: var(--ink); font-family: var(--font-display); font-size: 20px; touch-action: none; }
+.dpad [data-d="up"] { grid-column: 2; grid-row: 1; }
+.dpad [data-d="left"] { grid-column: 1; grid-row: 2; }
+.dpad [data-d="right"] { grid-column: 3; grid-row: 2; }
+.dpad [data-d="down"] { grid-column: 2; grid-row: 3; }
+@media (pointer: coarse) { .dpad.show { display: grid; } }
+
+/* ---------- code challenge modal ---------- */
+.modal { position: fixed; inset: 0; background: rgba(18, 12, 36, .78); display: grid; place-items: center; z-index: 20; padding-left: var(--gutter-l); padding-right: var(--gutter-r); padding-block: 16px; overflow: auto; }
+.modal-box { background: #fffaf0; border: 4px solid var(--ink); box-shadow: 0 0 0 4px #fffaf0, 0 0 0 8px var(--ink); width: min(1040px, 100%); padding: 20px 22px 22px; display: grid; gap: 14px; }
+.ch-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ch-head h2 { font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px); margin: 0; letter-spacing: .03em; }
+.ch-goal { margin: 0; font-size: clamp(16px, 1.8vw, 22px); max-width: 60ch; }
+.ch-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .ch-body { grid-template-columns: 1fr; } }
+.ch-grid { position: relative; display: grid; background: #e9c48c; border: 4px solid var(--ink); }
+.ch-cell { aspect-ratio: 1; border: 1px solid rgba(34, 26, 56, .12); display: grid; place-items: center; }
+.ch-cell img { width: 78%; image-rendering: pixelated; }
+.ch-bot { position: absolute; display: grid; place-items: center; transition: left .28s steps(4), top .28s steps(4); pointer-events: none; }
+.ch-bot img { width: 86%; image-rendering: pixelated; }
+.ch-bot.bonk { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.ch-side { display: grid; gap: 14px; min-width: 0; }
+.ch-label { font-family: var(--font-display); letter-spacing: .08em; text-transform: uppercase; font-size: 14px; color: var(--muted); }
+.ch-cmds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ch-cmds .btn { font-size: 17px; padding: 14px 6px; flex-direction: column; gap: 4px; color: #fff; }
+.ch-cmds .arrow { font-size: 30px; line-height: 1; }
+.ch-cmds [data-cmd=up], .ch-prog .d-up { background: #4a86e8; }
+.ch-cmds [data-cmd=down], .ch-prog .d-down { background: #9a5cd0; }
+.ch-cmds [data-cmd=left], .ch-prog .d-left { background: #e8a33a; }
+.ch-cmds [data-cmd=right], .ch-prog .d-right { background: #3fae6a; }
+.ch-prog { list-style: none; margin: 0; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 64px; background: #fff; border: 3px dashed var(--line); counter-reset: step; }
+.ch-prog li { counter-increment: step; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 17px; font-weight: 600; color: #fff; border: 3px solid var(--ink); padding: 6px 10px; }
+.ch-prog li .ar { font-size: 22px; line-height: 1; }
+.ch-prog li::before { content: counter(step); font-size: 12px; color: rgba(255,255,255,.8); }
+.ch-prog li.now { outline: 4px solid #ffd23f; outline-offset: 1px; }
+.ch-prog li.bad { background: #e84a4a; outline: 4px solid #e84a4a; }
+.ch-prog .x { color: var(--turq-deep); }
+.ch-prog .empty { color: var(--muted); font-family: var(--font-body); font-size: 15px; align-self: center; }
+.ch-run { display: flex; gap: 8px; flex-wrap: wrap; }
+.ch-msg { margin: 0; font-size: clamp(16px, 1.7vw, 20px); font-weight: 500; min-height: 3em; }
+.ch-msg.win { color: var(--turq-deep); }
+.ch-msg.bug { color: var(--sun-deep); }
+
+/* ---------- Robot Lab scene ---------- */
+#lab { background: var(--paper); overflow-y: auto; height: 100%; }
+.lab-wrap { max-width: 1240px; margin: 0 auto; padding-block: 18px 48px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); display: grid; gap: 22px; }
+.lab-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+.lab-title { display: flex; align-items: center; gap: 14px; }
+.lab-title canvas { width: 64px; height: 64px; image-rendering: pixelated; border: 3px solid var(--ink); background: var(--turq-pale); }
+.lab-title h1 { font-family: var(--font-display); font-size: clamp(30px, 4.4vw, 52px); margin: 0; line-height: 1; letter-spacing: .03em; }
+.lab-title p { margin: 4px 0 0; color: var(--muted); font-size: clamp(15px, 1.6vw, 18px); max-width: 52ch; }
+#lab .btn-ghost { color: var(--ink); border-color: var(--ink); box-shadow: 0 4px 0 var(--ink); background: var(--card); }
+.tabs { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 4px solid var(--ink); }
+.tab { font-family: var(--font-display); font-weight: 600; font-size: clamp(15px, 1.7vw, 19px); letter-spacing: .03em; padding: 12px 18px; border: 3px solid var(--ink); border-bottom: 0; background: #dfe7ec; color: var(--ink); margin-right: -3px; }
+.tab[aria-selected="true"] { background: var(--ink); color: #fff; }
+.panel { display: grid; gap: 18px; }
+.card { background: var(--card); border: 3px solid var(--ink); padding: 18px; min-width: 0; }
+.card h2, .card h3 { font-family: var(--font-display); margin: 0 0 10px; letter-spacing: .03em; line-height: 1.1; }
+.card h2 { font-size: clamp(22px, 2.6vw, 30px); }
+.card h3 { font-size: clamp(18px, 2vw, 22px); }
+.eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: var(--muted); }
+
+/* race setup */
+.setup { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 820px) { .setup { grid-template-columns: 1fr; } }
+.field { display: grid; gap: 8px; }
+.field label { font-weight: 600; font-size: 18px; }
+.secret-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.secret-row input {
+  font-family: var(--font-display); font-size: 34px; letter-spacing: .3em; text-transform: uppercase;
+  width: 10.5ch; max-width: 100%; padding: 8px 10px; border: 3px solid var(--ink); background: #fff; color: var(--ink);
+}
+.secret-row input.masked { -webkit-text-security: disc; }
+.err { color: var(--sun-deep); font-weight: 600; min-height: 1.5em; margin: 0; }
+.picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.picker button { font-family: var(--font-display); font-size: 20px; font-weight: 600; width: 48px; height: 48px; border: 3px solid var(--ink); background: #fff; color: var(--ink); }
+.picker button.wide { width: auto; padding: 0 12px; font-size: 16px; }
+.picker button[aria-pressed="true"] { background: var(--turq); color: #fff; }
+.setup-note { color: var(--muted); margin: 0; }
+
+/* race game */
+.race { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .race { grid-template-columns: 1fr; } }
+.board-col { display: grid; gap: 14px; justify-items: center; }
+.wboard { display: grid; gap: 8px; }
+.wrow { display: grid; grid-template-columns: repeat(5, clamp(42px, min(6.2vw, 7.4vh), 72px)); gap: 8px; }
+.wtile {
+  aspect-ratio: 1; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 3.6vw, 42px); text-transform: uppercase;
+  border: 3px solid var(--line); background: #fff; color: var(--ink);
+}
+.wtile.filled { border-color: var(--ink); }
+.wtile.g { background: var(--w-green); border-color: var(--w-green); color: #fff; }
+.wtile.y { background: var(--w-yellow); border-color: var(--w-yellow); color: #fff; }
+.wtile.x { background: var(--w-gray); border-color: var(--w-gray); color: #fff; }
+.wtile.flip { animation: flip .45s ease-in-out; }
+@keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.score { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 3px solid var(--ink); width: min(420px, 100%); background: #fff; }
+.score div { padding: 10px 12px; text-align: center; }
+.score div + div { border-left: 3px solid var(--ink); }
+.score b { display: block; font-family: var(--font-display); font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.score span { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-family: var(--font-display); }
+.score-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.score-row .score { width: min(300px, 100%); }
+.score-row .result { text-align: left; flex: 1 1 200px; }
+.result { font-family: var(--font-display); font-size: clamp(20px, 2.4vw, 28px); text-align: center; margin: 0; min-height: 1.2em; color: var(--turq-deep); }
+
+.brain { display: grid; gap: 14px; }
+.talk { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
+.talk canvas { width: 72px; height: 72px; image-rendering: pixelated; border: 3px solid var(--ink); background: var(--turq-pale); }
+.bubble { position: relative; background: #fff; border: 3px solid var(--ink); padding: 12px 14px; font-size: clamp(16px, 1.75vw, 21px); line-height: 1.45; min-height: 4.6em; }
+.bubble::before { content: ""; position: absolute; left: -10px; top: 20px; width: 14px; height: 14px; background: #fff; border-left: 3px solid var(--ink); border-bottom: 3px solid var(--ink); transform: rotate(45deg); }
+.bubble p { margin: 0 0 6px; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble ul { margin: 0 0 6px; padding-left: 1.1em; }
+.lt { display: inline-grid; place-items: center; min-width: 1.45em; height: 1.45em; padding: 0 .2em; font-family: var(--font-display); font-weight: 700; color: #fff; font-size: .9em; vertical-align: .05em; }
+.lt.g { background: var(--w-green); } .lt.y { background: var(--w-yellow); } .lt.x { background: var(--w-gray); }
+.word { font-family: var(--font-display); font-weight: 700; letter-spacing: .06em; color: var(--turq-deep); }
+.count-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.count { font-family: var(--font-display); font-weight: 700; font-size: clamp(44px, 6vw, 72px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.count-label { font-size: clamp(16px, 1.7vw, 20px); color: var(--muted); max-width: 22ch; }
+.dots { width: 100%; display: block; }
+.dots-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.dots-key i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.rank-box { display: grid; gap: 8px; }
+.rank-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rank-sub { font-size: 14px; color: var(--muted); }
+.rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.rank li { display: grid; grid-template-columns: 2em 5.4em minmax(0, 1fr) 3.6em; align-items: center; gap: 10px; animation: rankIn .35s both; animation-delay: calc(var(--i) * 45ms); }
+.rank .rk { font-family: var(--font-display); font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.rank .rw { font-family: var(--font-display); font-weight: 700; letter-spacing: .1em; font-size: clamp(17px, 1.8vw, 22px); }
+.rank .rb { height: 18px; background: #e3eaef; }
+.rank .rb i { display: block; height: 100%; background: var(--turq); }
+.rank .rp { font-family: var(--font-display); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; font-size: 17px; }
+.rank li.top .rw { color: var(--turq-deep); }
+.rank li.top .rb i { background: var(--sun); }
+.rank li.top .rk { color: var(--sun-deep); }
+.rank-more { margin: 0; color: var(--muted); font-size: 15px; }
+@keyframes rankIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--font-display); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: 17px; padding: 3px 8px; border: 2px solid var(--ink); background: var(--turq-pale); }
+.chip.more { background: transparent; border-style: dashed; color: var(--muted); }
+
+/* helper */
+.helper { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .helper { grid-template-columns: 1fr; } }
+.h-input { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.h-input input { font-family: var(--font-display); font-size: 28px; letter-spacing: .25em; text-transform: uppercase; width: 10ch; max-width: 100%; padding: 6px 10px; border: 3px solid var(--ink); background: #fff; color: var(--ink); }
+.h-rows { display: grid; gap: 8px; justify-content: start; }
+.h-row { display: grid; grid-template-columns: repeat(5, clamp(44px, 5.4vw, 60px)); gap: 6px; }
+.h-row .wtile { font-size: clamp(22px, 2.8vw, 32px); }
+.h-row.edit .wtile { cursor: pointer; }
+.h-help { color: var(--muted); margin: 0; }
+.suggest { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.suggest .big { font-family: var(--font-display); font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: .12em; color: var(--turq-deep); line-height: 1; }
+
+/* think */
+.steps3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .steps3 { grid-template-columns: 1fr; } }
+.step-n { display: inline-grid; place-items: center; width: 36px; height: 36px; background: var(--sun); border: 3px solid var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 20px; margin-bottom: 8px; }
+.step p { margin: 0; font-size: clamp(16px, 1.6vw, 19px); }
+.code-card pre { margin: 0; overflow-x: auto; background: var(--ink); color: #e9e4ff; padding: 16px; font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: clamp(14px, 1.5vw, 18px); line-height: 1.55; }
+.code-card .k { color: #ff9e6d; } .code-card .f { color: #6fe3d6; } .code-card .c { color: #9a91bd; } .code-card .s { color: #ffd76e; }
+.split2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 900px) { .split2 { grid-template-columns: 1fr; } }
+.bars { display: grid; gap: 8px; }
+.bar { display: grid; grid-template-columns: 7.5em 1fr 4em; align-items: center; gap: 10px; font-size: 15px; }
+.bar .track { height: 22px; background: #e3eaef; }
+.bar .fill { height: 100%; background: var(--turq); }
+.bar .n { font-variant-numeric: tabular-nums; font-family: var(--font-display); font-size: 17px; text-align: right; }
+.learn a { color: var(--turq-deep); font-weight: 600; }
+
+/* launch game */
+.ln-body { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .ln-body { grid-template-columns: 1fr; } }
+#lnCanvas { width: 100%; height: auto; image-rendering: pixelated; border: 4px solid var(--ink); background: #9fd8ee; display: block; }
+.ln-side { display: grid; gap: 16px; min-width: 0; }
+.ln-ctrl { display: grid; gap: 6px; }
+.ln-ctrl label { font-family: var(--font-display); font-size: 20px; font-weight: 600; display: flex; justify-content: space-between; }
+.ln-ctrl b { color: var(--turq-deep); font-variant-numeric: tabular-nums; }
+.ln-ctrl input { width: 100%; accent-color: var(--sun); height: 28px; }
+.ln-tries { margin: 0; color: var(--muted); font-family: var(--font-display); }
+/* confetti */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 30; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 10px; height: 10px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(105vh) rotate(540deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rank li, .hud #nextBtn.ready, .wtile.flip, .ch-bot.bonk, .dlg-more i, .banner.go .bn-strip, .stars.pop, .opt.shake { animation: none; }
+  .ch-bot { transition: none; }
+}
+@media (max-width: 1480px) { .brand { display: none; } }
+@media (max-width: 640px) {
+  .lvl { font-size: 12px; }
+  .dialog { padding: 12px 14px; bottom: 10px; }
+  .dlg-face { width: 48px; }
+}
+</style>
+</head>
+<body>
+<div id="quest" class="scene">
+  <header class="hud">
+    <div class="brand">Josh's <span>Code</span> Quest</div>
+    <ol class="levels" id="levels" aria-label="Levels"></ol>
+    <div class="stars" id="stars" title="Stars the class has earned"></div>
+    <div class="hud-actions">
+      <button class="btn btn-sun" id="nextBtn" type="button">Next level &#9654;</button>
+      <button class="btn btn-ghost" id="toLab" type="button">Robot Lab</button>
+      <button class="btn btn-ghost" id="fsBtn" type="button">Full screen</button>
+    </div>
+  </header>
+  <main class="stage" id="stage">
+    <div class="board" id="board">
+      <canvas id="map" width="320" height="180" aria-label="Josh's coding journey, one level at a time"></canvas>
+      <canvas class="fx fx-glow" id="fxGlow" width="640" height="360" aria-hidden="true"></canvas>
+      <canvas class="fx fx-shade" id="fxShade" width="640" height="360" aria-hidden="true"></canvas>
+      <div class="plate" id="plate" hidden></div>
+    </div>
+      <div class="dialog" id="dialog" hidden role="dialog" aria-live="polite">
+      <canvas class="dlg-face" id="dlgFace" width="44" height="44"></canvas>
+      <div class="dlg-name" id="dlgName">Josh</div>
+      <div class="dlg-text" id="dlgText"></div>
+      <div class="dlg-quiz" id="dlgQuiz" hidden></div>
+      <div class="dlg-foot"><div class="dlg-actions" id="dlgActions"></div><span class="dlg-more" id="dlgMore">Click or Space <i></i></span></div>
+    </div>
+    <div class="statcard" id="statcard" hidden>
+      <div class="stat-box">
+        <div class="stat-eyebrow">Big number</div>
+        <div class="stat-num" id="statNum">0</div>
+        <div class="stat-label" id="statLabel"></div>
+        <p class="stat-compare" id="statCompare"></p>
+        <button class="btn btn-sun btn-big" id="statGo" type="button">Keep going &#9654;</button>
+      </div>
+    </div>
+    <div class="banner" id="banner" hidden><div class="bn-strip"><div class="bn-level" id="bnLevel"></div><div class="bn-name" id="bnName"></div></div></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="title-card" id="titleCard">
+      <div class="title-inner">
+        <div class="title-kicker">A guest lecture in 7 levels</div>
+        <h1 class="title-big">Josh's <em>Code</em> Quest</h1>
+        <p class="title-sub">How I learned to tell computers what to do, and what I build with code today.</p>
+        <div class="title-btns">
+          <button class="btn btn-sun btn-big" id="startBtn" type="button">Start the adventure &#9654;</button>
+          <button class="btn btn-ghost btn-big" id="titleLab" type="button">Robot Lab</button>
+        </div>
+        <button class="linkbtn" id="resetBtn" type="button" hidden>Start over from Level 1</button>
+        <p class="title-tip"><kbd>Space</kbd> or <kbd>&rarr;</kbd> to keep going &nbsp;&middot;&nbsp; <kbd>&larr;</kbd> to go back a level &nbsp;&middot;&nbsp; <kbd>A</kbd>&ndash;<kbd>D</kbd> to answer questions</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="challenge" hidden role="dialog" aria-modal="true" aria-labelledby="chTitle">
+  <div class="modal-box">
+    <div class="ch-head">
+      <h2 id="chTitle">Code Challenge 1</h2>
+      <button class="btn" id="chClose" type="button">Back to the map</button>
+    </div>
+    <p class="ch-goal" id="chGoal">Write a program that gets the robot to the gem. Don't bump into rocks!</p>
+    <div class="ch-body">
+      <div class="ch-grid" id="chGrid"></div>
+      <div class="ch-side">
+        <div>
+          <div class="ch-label">Instructions</div>
+          <div class="ch-cmds">
+            <button class="btn" type="button" data-cmd="up"><span class="arrow">&uarr;</span>Up</button>
+            <button class="btn" type="button" data-cmd="down"><span class="arrow">&darr;</span>Down</button>
+            <button class="btn" type="button" data-cmd="left"><span class="arrow">&larr;</span>Left</button>
+            <button class="btn" type="button" data-cmd="right"><span class="arrow">&rarr;</span>Right</button>
+          </div>
+        </div>
+        <div>
+          <div class="ch-label">Your program</div>
+          <ol class="ch-prog" id="chProg"></ol>
+        </div>
+        <div class="ch-run">
+          <button class="btn btn-sun" id="chRun" type="button">Run &#9654;</button>
+          <button class="btn" id="chUndo" type="button">Undo</button>
+          <button class="btn" id="chClear" type="button">Clear</button>
+          <button class="btn btn-turq" id="chNext" type="button" hidden>Next challenge &#9654;</button>
+        </div>
+        <p class="ch-msg" id="chMsg"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="launch" hidden role="dialog" aria-modal="true" aria-labelledby="lnTitle">
+  <div class="modal-box">
+    <div class="ch-head">
+      <h2 id="lnTitle">Launch Lab</h2>
+      <button class="btn" id="lnClose" type="button">Back to the map</button>
+    </div>
+    <p class="ch-goal">My first app was all about launching things. Pick an angle and a power, then knock down the tower!</p>
+    <div class="ln-body">
+      <canvas id="lnCanvas" width="640" height="340" aria-label="Launch game"></canvas>
+      <div class="ln-side">
+        <div class="ln-ctrl"><label for="lAngle">Angle <b id="lAngleV">45°</b></label><input type="range" id="lAngle" min="10" max="80" step="1" value="45"></div>
+        <div class="ln-ctrl"><label for="lPower">Power <b id="lPowerV">60</b></label><input type="range" id="lPower" min="30" max="100" step="1" value="60"></div>
+        <div class="ch-run">
+          <button class="btn btn-sun btn-big" id="lnGo" type="button">Launch! &#9654;</button>
+          <button class="btn" id="lnNew" type="button">Move the tower</button>
+        </div>
+        <p class="ch-msg" id="lnMsg"></p>
+        <p class="ln-tries" id="lnTries"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="lab" class="scene" hidden>
+  <div class="lab-wrap">
+    <div class="lab-top">
+      <div class="lab-title">
+        <canvas id="labBot" width="16" height="16"></canvas>
+        <div>
+          <h1>Robot Lab</h1>
+          <p>My robot plays Wordle with code. It can't read minds. It only knows a list of words and the colors it gets back.</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="backMap" type="button">&#9664; Back to the map</button>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-race" aria-selected="true" aria-controls="p-race" type="button">Race the robot</button>
+      <button class="tab" role="tab" id="tab-help" aria-selected="false" aria-controls="p-help" type="button">Robot helper</button>
+      <button class="tab" role="tab" id="tab-think" aria-selected="false" aria-controls="p-think" type="button">How the robot thinks</button>
+    </div>
+
+    <!-- RACE -->
+    <section class="panel" id="p-race" role="tabpanel" aria-labelledby="tab-race">
+      <div class="setup" id="raceSetup">
+        <div class="card">
+          <div class="eyebrow">Step 1</div>
+          <h2>What was the class's secret word?</h2>
+          <form class="field" id="secretForm" autocomplete="off">
+            <label for="secretInput">Type the 5-letter word. It stays hidden as dots.</label>
+            <div class="secret-row">
+              <input id="secretInput" class="masked" maxlength="5" inputmode="text" autocapitalize="characters" spellcheck="false" aria-describedby="secretErr">
+              <button class="btn" type="button" id="peekBtn">Show</button>
+              <button class="btn" type="button" id="randBtn">Pick a random word</button>
+            </div>
+            <p class="err" id="secretErr"></p>
+            <div><button class="btn btn-sun btn-big" type="submit">Start the robot &#9654;</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Step 2</div>
+          <h2>How many guesses did the class need?</h2>
+          <div class="picker" id="classPicker" role="group" aria-label="Class guesses">
+            <button type="button" data-n="1" aria-pressed="false">1</button>
+            <button type="button" data-n="2" aria-pressed="false">2</button>
+            <button type="button" data-n="3" aria-pressed="false">3</button>
+            <button type="button" data-n="4" aria-pressed="false">4</button>
+            <button type="button" data-n="5" aria-pressed="false">5</button>
+            <button type="button" data-n="6" aria-pressed="false">6</button>
+            <button type="button" data-n="0" class="wide" aria-pressed="false">Didn't get it</button>
+          </div>
+          <p class="setup-note" style="margin-top:12px">You can skip this and fill it in later. The robot plays the same word and we compare.</p>
+        </div>
+      </div>
+
+      <div class="race" id="raceGame">
+        <div class="card board-col">
+          <div class="wboard" id="raceBoard"></div>
+          <div class="controls">
+            <button class="btn btn-sun btn-big" id="moveBtn" type="button">Robot's next guess &#9654;</button>
+            <button class="btn" id="autoBtn" type="button" aria-pressed="false">Auto-play</button>
+            <button class="btn" id="newBtn" type="button">New word</button>
+          </div>
+        </div>
+        <div class="card brain">
+          <div class="talk">
+            <canvas id="raceBot" width="16" height="16"></canvas>
+            <div class="bubble" id="raceSay"><p>Type the class's secret word on the left and I'll try to find it.</p></div>
+          </div>
+          <div>
+            <div class="eyebrow">Inside the robot's brain</div>
+            <div class="count-row"><div class="count" id="raceCount">0</div><div class="count-label" id="raceCountLabel">words could be the answer</div></div>
+          </div>
+          <div class="rank-box" id="raceRank"></div>
+          <canvas class="dots" id="raceDots" height="10"></canvas>
+          <div class="dots-key"><span><i style="background:var(--turq)"></i>Still possible</span><span><i style="background:var(--sun)"></i>Just crossed out</span><span><i style="background:#d7dee4"></i>Crossed out earlier</span></div>
+          <div class="score-row">
+            <div class="score">
+              <div><span>Class</span><b id="scoreClass">?</b></div>
+              <div><span>Robot</span><b id="scoreBot">&ndash;</b></div>
+            </div>
+            <p class="result" id="raceResult"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HELPER -->
+    <section class="panel" id="p-help" role="tabpanel" aria-labelledby="tab-help" hidden>
+      <div class="helper">
+        <div class="card">
+          <h2>Tell the robot your clues</h2>
+          <p class="h-help">Playing a Wordle right now? Type a guess you made, then tap each tile until it matches your colors.</p>
+          <div class="h-rows" id="hRows" style="margin-top:14px"></div>
+          <div class="h-input" style="margin-top:14px">
+            <input id="hInput" maxlength="5" autocomplete="off" spellcheck="false" aria-label="Your guess">
+            <button class="btn btn-sun" id="hAdd" type="button">Add clue</button>
+            <button class="btn" id="hUndo" type="button">Undo</button>
+            <button class="btn" id="hReset" type="button">Start over</button>
+          </div>
+          <p class="err" id="hErr"></p>
+        </div>
+        <div class="card brain">
+          <div class="count-row"><div class="count" id="hCount">0</div><div class="count-label">words still fit your clues</div></div>
+          <div>
+            <div class="eyebrow">Robot's best next guess</div>
+            <div class="suggest"><div class="big" id="hBest">RAISE</div><button class="btn btn-turq" id="hUse" type="button">Use this word</button></div>
+            <p class="h-help" id="hWhy" style="margin-top:8px"></p>
+          </div>
+          <div class="rank-box" id="hRank"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THINK -->
+    <section class="panel" id="p-think" role="tabpanel" aria-labelledby="tab-think" hidden>
+      <div class="steps3">
+        <div class="card step"><div class="step-n">1</div><h3>Make a list</h3><p>The robot starts with a list of <b id="nWords">2,060</b> five-letter words. Any of them could be the secret word.</p></div>
+        <div class="card step"><div class="step-n">2</div><h3>Cross out</h3><p>After each guess, it checks every word on the list. If a word doesn't match the colors, it gets crossed out.</p></div>
+        <div class="card step"><div class="step-n">3</div><h3>Ask a smart question</h3><p>It picks the guess that splits the leftover words into the most groups. That's like asking "Is it an animal?" in 20 Questions.</p></div>
+      </div>
+      <div class="split2">
+        <div class="card code-card">
+          <h3>The real idea, written as code</h3>
+          <pre><code><span class="c">// Step 2: cross out words that don't fit</span>
+<span class="k">for</span> (word <span class="k">of</span> possibleWords) {
+  <span class="k">if</span> (<span class="f">colorsFor</span>(guess, word) <span class="k">==</span> colorsWeGot) {
+    <span class="f">keep</span>(word)
+  } <span class="k">else</span> {
+    <span class="f">crossOut</span>(word)
+  }
+}</code></pre>
+        </div>
+        <div class="card">
+          <h3>How good is the robot?</h3>
+          <p style="margin:0 0 12px">I tested it on every word in its list. It never needed more than <b id="worstN">5</b> guesses, and it averaged <b id="avgN">3.4</b>.</p>
+          <div class="bars" id="bars"></div>
+        </div>
+      </div>
+      <div class="card learn">
+        <h3>Want to start coding?</h3>
+        <p style="margin:0">Try <a href="https://scratch.mit.edu" target="_blank" rel="noopener">Scratch</a> (scratch.mit.edu) to make your own games with code blocks, or the free courses at <a href="https://code.org" target="_blank" rel="noopener">Code.org</a>. Both are free.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+// Wordle robot core: shared by the page and the node test
+function makeSolver(ANSWERS, EXTRA, opts) {
+  opts = opts || {};
+  const K = opts.K ?? 1.0;
+  const ALL = ANSWERS.concat(EXTRA);
+  const idx = new Map(ALL.map((w, i) => [w, i]));
+  const codes = ALL.map(w => Uint8Array.from(w, c => c.charCodeAt(0) - 97));
+  const cnt = new Uint8Array(26);
+  function fbCodes(g, a) {
+    let code = 0, mult = 1;
+    const res = [0, 0, 0, 0, 0];
+    cnt.fill(0);
+    for (let i = 0; i < 5; i++) { if (g[i] === a[i]) res[i] = 2; else cnt[a[i]]++; }
+    for (let i = 0; i < 5; i++) { if (res[i] !== 2 && cnt[g[i]] > 0) { res[i] = 1; cnt[g[i]]--; } }
+    for (let i = 0; i < 5; i++) { code += res[i] * mult; mult *= 3; }
+    return code;
+  }
+  function toCodes(w) { return Uint8Array.from(w, c => c.charCodeAt(0) - 97); }
+  function feedback(guess, answer) { return fbCodes(toCodes(guess), toCodes(answer)); }
+  function decode(code) { const r = []; for (let i = 0; i < 5; i++) { r.push(code % 3); code = Math.floor(code / 3); } return r; }
+  function encode(arr) { let c = 0, m = 1; for (let i = 0; i < 5; i++) { c += arr[i] * m; m *= 3; } return c; }
+  function filter(cands, guess, code) {
+    const g = toCodes(guess);
+    return cands.filter(w => fbCodes(g, codesOf(w)) === code);
+  }
+  const extraCodes = new Map();
+  function codesOf(w) { const i = idx.get(w); if (i !== undefined) return codes[i]; let c = extraCodes.get(w); if (!c) { c = toCodes(w); extraCodes.set(w, c); } return c; }
+  const counts = new Int32Array(243);
+  function score(gc, candCodes, n) {
+    counts.fill(0);
+    for (let j = 0; j < n; j++) counts[fbCodes(gc, candCodes[j])]++;
+    let H = 0, groups = 0, biggest = 0;
+    for (let k = 0; k < 243; k++) { const c = counts[k]; if (c) { const p = c / n; H -= p * Math.log2(p); groups++; if (c > biggest) biggest = c; } }
+    return { H, groups, biggest };
+  }
+  // pick the guess that best splits the remaining words (most information), preferring possible answers and common words
+  function best(cands) {
+    const n = cands.length;
+    if (n === 0) return null;
+    if (n <= 2) return { word: cands[0], isCandidate: true, groups: n, biggest: n === 2 ? 1 : 1, H: n === 2 ? 1 : 0 };
+    const candCodes = cands.map(codesOf);
+    const candSet = new Set(cands);
+    let bestW = null, bestS = -Infinity, bestInfo = null;
+    const pool = cands.concat(ALL.filter(w => !candSet.has(w)));
+    for (let i = 0; i < pool.length; i++) {
+      const w = pool[i];
+      const info = score(codesOf(w), candCodes, n);
+      const isC = candSet.has(w);
+      const rank = idx.has(w) ? idx.get(w) : 0;
+      const s = info.H + (isC ? K / n * Math.log2(n) : 0) - rank * 1e-7;
+      if (s > bestS) { bestS = s; bestW = w; bestInfo = info; bestInfo.isCandidate = isC; }
+    }
+    return Object.assign({ word: bestW }, bestInfo);
+  }
+  return { ALL, ANSWERS, EXTRA, feedback, decode, encode, filter, best, score: (w, cands) => score(codesOf(w), cands.map(codesOf), cands.length), isWord: w => idx.has(w) };
+}
+</script>
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = (ms) => new Promise((r) => setTimeout(r, reduceMotion ? Math.min(ms, 60) : ms));
+const fmt = (n) => n.toLocaleString('en-US');
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
+};
+
+/* ============ words + robot ============ */
+const ANSWERS = 'about their there which would other after first think could these where right being going still never those world great while every state three since under thing house place again found might money night until doing start times today point music water based small later order thank whole maybe story least early local video young court given level often south known large wrong along needs class close cause happy human woman leave north watch light short taken third among check heart child major media quite works final front ready bring march study clear month board field fight force issue price space total above share sense break event sorry guess learn added alone movie press tried worth sound value round stand stuff drive green match model trust range trade chief lower stage title enjoy cover seven staff super union built crazy daily paper voice whose earth below offer sleep table truth build visit wrote river shall speak write album eight funny peace spent store track ahead allow radio cross focus speed extra quick agree clean photo scene spend coach heavy train claim hotel judge brain floor image meant reach civil dance stock worst beach ended older color grand sweet touch doubt drink shown basic carry crime fully plant worse award block lived avoid catch coast trial truly queen broke glass prior royal serve begin twice worry brand count fresh mouth owner scale score smart throw click faith metal agent apply basis enter prime waste weird adult grade stone apart aware fifth birth labor lucky prove tough alive apple dress horse magic stick turns frank guide raise treat youth funds exist guard sides solid sport hello links plane shape upper cheap joint steel tired crowd enemy fixed limit ocean proof chair honor noted stuck sugar drama entry grant grown lying route saved smoke squad teach angry laugh lunch storm actor chain equal quiet split urban fault mixed phase smile truck blame false fired novel shirt cream mayor minor theme usual draft spoke upset cycle goods armed aside empty prize rural admit favor frame guest teeth bunch fruit index shift stood crown grace chose crash depth error noise panel plate shame cable print sight broad drawn motor solar blind brief debut paint pilot steam exact quote swear trend bread inner reply tower wheel faced pride rough smell topic pants sharp trick audio chart mount occur argue awful bound cloud loose moral shock thick threw angel bonus flash gross refer trail uncle badly chase ideal clock label pitch pizza plain anger comic ghost newly skill solve trash virus boost hired saint steal buddy delay elite forth layer marry nurse sheet bench medal shell silly angle forum grass hence rapid sixth valid vital creek fraud honey ratio scary spell sword begun daddy drove glory logic dozen fancy input knock ought flood rally swing alert arena boots brave fleet robin shake shore blast pound mouse piano craft rated sauce slide tiger alien beast candy fifty relax alarm globe hoped spare chaos corps opera quest sized anime panic scope stays alpha brick gains mercy outer venue wages habit naval noble robot toxic wound asset baker brush essay maker snake ultra usage canal climb fever fluid nasty twist unity blown chips fence stole dealt flesh forty laser loyal patch radar villa adopt blade cargo cried humor nerve sandy sheep trace bases chill grain liver mines rival sadly sizes slept spray suite verse bless chuck couch crush genre lease shine tweet react rocky shade teens vocal yield bacon burst salad stake swift awake blank curve harsh hurry mason pearl sweat alike arrow cabin eagle eaten guilt haven theft valve charm cruel delta ridge tribe canon stamp voter array belly booth cliff derby shark tales dairy diary drill jeans meter olive setup skull smash basin breed bride fairy freak grief lined lodge merit micro rebel tooth viral beard drain flame ninth penny petty reign scare sunny cheat cheer elder fiber fried pulse realm shout alter brass graph shook stack aging audit clips dried spite burnt buyer cease cloth eager elect lobby orbit ranch trunk badge carol ferry gauge rider shelf width legit sheer stark thumb wheat wrist acute civic clerk crude drone flour minus pause puppy slice vinyl probe remix sneak spark steep straw weigh adapt dense whale amber ankle armor berry clash grasp manga poker scout steak sweep cheek curry drake polar skirt spike toast waist wreck blend brake cough depot drank feast frost purse tense chess float grind grove hobby lance risky sided sober spice swept towel arise ashes bloom clown dodge guild prone siege sixty sonic spine admin baked crane donor tenth batch paste plaza skies stare blunt champ ditch scrap snack stern stiff sworn unite vault wagon midst mommy onion rogue abbey baron bunny choir holly karma shiny spoon thief alley bully marsh messy roast salon tuned vague coral dough irony maple relay risen stunt freed ivory niche porch utter creep elbow exile goose grill ruler spill swamp tasty flown imply merry reset shave drift hatch niece scent slate surge token yacht manor pupil spoil altar atlas flush hairy ounce seize sting wired belle raven stall bliss daisy faint forge notch omega queue trout bravo crawl digit flint lunar peach cedar heath pinch rover syrup traps bowls dwarf liner merge naive rigid vivid boxer brook hedge joker laden rainy salty serum skate stray tempo torch turbo arose blink chili excel faded genus glove greed greet owing proxy renew rumor stoke thigh troll aisle amino bleed brace choke motto onset props prose razor steer ample bingo cubic macro shady slack slick stove tract vista vogue adore creed crisp crust flora gamma grape juicy moody prank spear stain tidal wrath blaze chalk flock hyper moist scoop scrub shale trait troop clone drown jewel piper scarf timer tying wakes borne dusty focal noisy snail tutor verge yeast erase manly oxide pence repay ropes rouge shove snaps basil chord crest fetch fuzzy nexus optic panda slash stein baton chunk cocoa comet dread flank flare lever pedal query sewer smack swell align attic await cache comfy flick funky groom hydro lyric plead debit lotus tally timed wedge alloy crank linen motel resin stint weary agony binge caste chant colon curly muddy abide avail madam nanny piles poppy tease bluff flyer miner needy swipe tango blitz circa cloak dwell fiery goofy jolly mummy purge rhino venom windy blush furry mango oasis oddly paced rhyme savvy spree vapor witty woven amend bloke cater edged finch sedan slang algae dolly ethic flair haunt hazel specs viola waved yummy adobe brawl logos quota swore weave denim flute matte morse taxed tread truce unfit aloud boast brink cobra sigma usher annex barge birch bland bribe canoe cider equip havoc humid milky mixer pivot suing arbor cling icing lapse login mimic mural nasal quasi cameo deter diner envoy fungi psych rinse scalp squat thorn toned wharf wiser crate crave gloss graft guise leash mater rodeo shire swung taboo alias annoy grail kappa liter penal plank privy siren smear snowy stalk stink swine clamp inlet kudos mains mould quake racer recap shaky stout stump berth mania parry patio prism renal roach sniff squid swarm taxis aspen bleak bogus dizzy enact hound mourn pouch shack stale tummy wager whack broom brute eater froze hitch medic nylon ozone rotor agile carve crook darts genie glued hubby ledge natal piled torso abyss basal demos elves ether finer fused gorge latex motif peril shear snoop tenor zebra broth cones evade maxim misty pinky quits satin slows tonic twain vowed ditto gland jumbo slime spawn waltz haste otter relic reuse apron exert glare hefty slump azure cadet craze geese phony coupe ebony folly itchy latch libel lofty maize picky prima regal shalt sheen sleek sling adept bowed eerie farce fling flung glide plaid plush smoky vowel buggy cutie dodgy ethos hinge melon rowan shred gloom heaps limbo lousy overt reins thine viper beige bulky incur leafy piggy shrug sonar stony taper toxin cello feral hasty husky laced perch truss undue wacky assay fishy frail glaze sinus stung whine banjo beech comma dogma evoke lowly lucid saver snuck tweak angst bison expel frown helix hover knack silky stair brood dandy leach quilt sauna scrum snare stomp suede timid tweed uncut widen braid bulge forte kayak kneel recon vigil waive aroma budge clout corny gated hoard horde lotto nitro poked proto shone taker triad valor wight bathe giddy melee merch nudge payer serge tempt whiff flake ionic lorry mover sassy wield brisk defer flask fluff giver gnome lymph polka repel skier swoop waged whoop amaze drier epoch foggy gator magma nutty plume plump shrub stead bagel bumpy codex facet firth floss locus moors posse saber samba slant soles spelt tacky tulip croft grate hilly leech madly nifty shawl valet baggy fable gabby infer laird strut swirl theta zoned awoke axial carat chore crept curvy filly grunt pixie sever stoic actin avert avian bayou chime delve fluke growl hater nosed soggy stoop abode dazed dowry hippo inept juror modal pluck puffy quail quirk rabid scorn vouch wafer amuse aptly brunt chaps groan hoist murky pinto fives folio franc gully lilac padre quill revel rower spire spout alibi clasp crypt edict fiend mower oiled pesky rouse scant skunk sloth spoof trope butte foyer grime heron inert lumen piety remit tonal totem acorn aloft beset gable howdy munch slimy snout spied tunic brine churn hunch morph nomad rigor roper shank thyme toner unify aegis caged diode ester hertz leaky quack semis leapt quark teeny anvil cabal cadre cramp decoy drool fixer foray friar fussy goody hutch jetty khaki koala merle petal poise rupee smirk snipe stave trove winch crock erode kebab rondo scion vigor axiom chino graze longs mince moray speck adorn cumin decal lingo meaty quart ruddy bower capes duchy femur gusto jazzy kiosk quell roost shard sieve spore swain tenet tiled aback aloof cajun druid duvet eject forgo freer fryer largo larva livid molar rayon sable slush smelt bushy clung criss mocha parse savor taint tiara visor alder bossy crumb ember erupt evict gleam gummy idiom jaded pooch scour talon thump truer yearn caddy chasm crass piped prune taunt whirl adage brash flack liege llama navel payed perky steed chewy cleft clump deuce embed mushy runny senna tacit wreak amiss ethyl grits heady hotly libra pecan pique shoal smite twine aorta beret bogey boron bugle flier frisk girth plumb vying beryl chump clove ensue gecko lathe outed reeve spilt tuner gaunt heave knoll mulch rerun saucy servo suave tibia xenon afoot amity canny doggo gauze ghoul keyed putty radon sewed swish whiny banal duper frock riser stork swoon thane tithe bongo cairn crepe flaky gamut paler prawn puree topaz waned anode argon atone briar cacao caper carer chock comer nadir salvo tapas atoll cotta eaves inset limes lunge slung surly trier verve bonny eared henna lumpy neath olden spool spurt teary tween wonky adieu bebop corgi dusky gaudy gauss grout musty seedy sleet spasm swath tinge burly covet dingy fizzy gourd manta mores shunt stent agate alkyl aster canto cynic faker flume gripe gruff lolly salve scaly scold vexed wiper bezel crick filet hyena knelt manna peeve prong sawed sloop tongs trite allot amine batty bitty blurb chirp conch dimly golem levee lurch scoot showy spate tabby aural blimp clary dally elude glade gulch hiker irate mambo rowed scoff sepia weeps amass auger lapel tawny anima awash brawn grimy islet laity midge parka posit snore stank cacti chaff crump dingo froth guile natty prowl quash redox shrew shush soapy waver wring beefy drape lasso lemma redux scone tamer zonal beaux biome bough crony emcee fugue glean lanky lurid stipe trill unmet agora askew delft outdo riven tetra verso chard elegy evens fiver golly gouge mauve pacer ravel scape taffy tepid tripe anion balmy glyph gumbo inane nitty saggy sneer splat usurp adder algal allay bream coder knick minty moldy rivet twirl abate easel grist inlay poach sappy shill throb bight bilge conga daffy enrol jumpy loath loopy mused poser pylon refit roomy terse clank cushy gaffe gavel hoppy ladle phage shirk spiel swank tutti twill agape anise cilia cinch colic dwelt glint oldie recur snark trawl yucca abhor dilly igloo jiffy mamba mossy quint raspy ripen serif spiny tangy tuber affix afoul clang glebe liven mitre pager skiff wrest clink dregs gloat hokey mirth morel plebs ruble snarl taiga tulle amply bevel clack covey crimp guano'.split(' ');
+const FREQ = '6.40 6.33 6.31 6.30 6.27 6.16 6.11 6.11 6.08 6.06 6.04 6.00 5.96 5.95 5.94 5.92 5.91 5.90 5.89 5.88 5.86 5.79 5.78 5.78 5.75 5.73 5.72 5.71 5.71 5.70 5.68 5.66 5.64 5.61 5.61 5.60 5.56 5.56 5.55 5.54 5.52 5.52 5.51 5.51 5.49 5.49 5.48 5.46 5.45 5.45 5.44 5.43 5.43 5.43 5.43 5.41 5.41 5.41 5.41 5.40 5.39 5.39 5.39 5.38 5.37 5.36 5.36 5.35 5.35 5.35 5.35 5.34 5.34 5.34 5.33 5.33 5.33 5.32 5.31 5.31 5.31 5.30 5.30 5.30 5.29 5.29 5.28 5.28 5.28 5.27 5.26 5.26 5.25 5.25 5.24 5.24 5.23 5.23 5.23 5.23 5.23 5.21 5.20 5.20 5.19 5.18 5.18 5.18 5.17 5.17 5.16 5.16 5.16 5.16 5.16 5.16 5.15 5.15 5.14 5.14 5.14 5.13 5.13 5.13 5.13 5.13 5.12 5.12 5.11 5.11 5.10 5.10 5.09 5.08 5.08 5.08 5.08 5.08 5.07 5.07 5.07 5.07 5.07 5.07 5.06 5.05 5.05 5.05 5.05 5.05 5.04 5.04 5.04 5.03 5.03 5.03 5.03 5.02 5.02 5.02 5.02 5.02 5.02 5.02 5.01 5.01 5.01 5.00 5.00 5.00 4.98 4.98 4.97 4.97 4.97 4.97 4.97 4.96 4.96 4.96 4.95 4.95 4.95 4.94 4.94 4.94 4.94 4.94 4.93 4.93 4.93 4.93 4.92 4.92 4.92 4.91 4.91 4.91 4.91 4.90 4.90 4.90 4.89 4.89 4.89 4.89 4.89 4.89 4.88 4.88 4.88 4.87 4.87 4.87 4.87 4.87 4.86 4.85 4.85 4.85 4.85 4.85 4.84 4.84 4.84 4.83 4.83 4.83 4.83 4.83 4.83 4.83 4.83 4.83 4.82 4.82 4.82 4.81 4.81 4.81 4.81 4.81 4.81 4.81 4.80 4.80 4.80 4.78 4.78 4.78 4.77 4.77 4.77 4.77 4.77 4.76 4.76 4.76 4.76 4.76 4.76 4.76 4.75 4.75 4.75 4.75 4.75 4.74 4.73 4.73 4.73 4.73 4.73 4.72 4.72 4.72 4.72 4.72 4.71 4.71 4.71 4.71 4.70 4.70 4.70 4.70 4.70 4.70 4.69 4.69 4.69 4.68 4.68 4.67 4.67 4.67 4.67 4.67 4.67 4.67 4.67 4.67 4.67 4.66 4.66 4.66 4.66 4.65 4.65 4.65 4.65 4.65 4.65 4.64 4.64 4.64 4.64 4.64 4.63 4.63 4.63 4.63 4.63 4.62 4.62 4.62 4.62 4.62 4.61 4.61 4.61 4.60 4.60 4.59 4.59 4.59 4.59 4.59 4.58 4.58 4.58 4.58 4.58 4.57 4.57 4.57 4.57 4.57 4.56 4.56 4.55 4.55 4.55 4.55 4.55 4.55 4.55 4.55 4.54 4.54 4.54 4.53 4.53 4.53 4.53 4.52 4.52 4.52 4.52 4.52 4.52 4.51 4.51 4.51 4.51 4.50 4.50 4.50 4.50 4.50 4.49 4.49 4.49 4.49 4.49 4.48 4.48 4.48 4.47 4.47 4.47 4.47 4.46 4.46 4.46 4.46 4.46 4.46 4.46 4.46 4.46 4.45 4.45 4.45 4.45 4.45 4.45 4.45 4.44 4.44 4.44 4.43 4.43 4.43 4.43 4.43 4.42 4.42 4.42 4.42 4.42 4.42 4.42 4.42 4.41 4.41 4.41 4.41 4.40 4.40 4.40 4.40 4.40 4.40 4.40 4.40 4.39 4.39 4.39 4.39 4.38 4.38 4.38 4.38 4.38 4.38 4.38 4.38 4.37 4.37 4.37 4.37 4.37 4.37 4.37 4.36 4.36 4.36 4.36 4.36 4.35 4.35 4.35 4.35 4.35 4.34 4.34 4.34 4.33 4.33 4.33 4.33 4.33 4.33 4.33 4.33 4.32 4.32 4.31 4.31 4.30 4.30 4.30 4.30 4.30 4.29 4.29 4.29 4.29 4.29 4.28 4.28 4.28 4.28 4.27 4.27 4.27 4.27 4.27 4.26 4.26 4.26 4.26 4.25 4.25 4.25 4.25 4.25 4.25 4.25 4.24 4.24 4.24 4.24 4.24 4.24 4.23 4.23 4.23 4.23 4.23 4.23 4.23 4.23 4.22 4.22 4.22 4.22 4.22 4.22 4.22 4.21 4.21 4.21 4.21 4.20 4.20 4.20 4.20 4.20 4.20 4.20 4.20 4.19 4.19 4.19 4.19 4.19 4.19 4.19 4.19 4.19 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.18 4.17 4.17 4.17 4.17 4.17 4.17 4.17 4.17 4.16 4.16 4.16 4.16 4.16 4.16 4.15 4.15 4.15 4.15 4.15 4.14 4.14 4.14 4.14 4.14 4.14 4.14 4.14 4.13 4.13 4.13 4.13 4.13 4.13 4.13 4.13 4.13 4.12 4.12 4.12 4.12 4.12 4.11 4.11 4.11 4.10 4.10 4.10 4.10 4.10 4.10 4.10 4.09 4.09 4.09 4.09 4.09 4.09 4.09 4.09 4.09 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.08 4.07 4.07 4.07 4.07 4.07 4.07 4.07 4.07 4.07 4.06 4.06 4.06 4.06 4.06 4.06 4.06 4.06 4.05 4.05 4.05 4.05 4.05 4.04 4.04 4.04 4.04 4.04 4.03 4.03 4.03 4.03 4.03 4.03 4.03 4.03 4.03 4.03 4.02 4.02 4.02 4.02 4.02 4.02 4.02 4.01 4.01 4.01 4.01 4.01 4.01 4.00 4.00 4.00 4.00 4.00 4.00 4.00 4.00 4.00 4.00 4.00 3.99 3.99 3.99 3.99 3.99 3.99 3.99 3.98 3.98 3.98 3.97 3.97 3.97 3.97 3.97 3.97 3.97 3.97 3.97 3.97 3.97 3.96 3.96 3.96 3.96 3.96 3.96 3.96 3.96 3.96 3.95 3.95 3.95 3.95 3.95 3.95 3.95 3.95 3.95 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.94 3.93 3.93 3.93 3.93 3.93 3.93 3.93 3.93 3.93 3.93 3.93 3.92 3.92 3.92 3.92 3.92 3.91 3.91 3.91 3.91 3.91 3.90 3.90 3.90 3.90 3.90 3.90 3.90 3.90 3.90 3.90 3.90 3.89 3.89 3.89 3.89 3.88 3.88 3.88 3.88 3.88 3.88 3.88 3.88 3.88 3.87 3.87 3.87 3.87 3.87 3.87 3.87 3.87 3.86 3.86 3.86 3.86 3.86 3.86 3.86 3.85 3.85 3.85 3.85 3.85 3.84 3.84 3.84 3.84 3.84 3.84 3.84 3.84 3.84 3.83 3.83 3.83 3.83 3.83 3.82 3.82 3.82 3.82 3.82 3.82 3.82 3.82 3.81 3.81 3.81 3.80 3.80 3.80 3.80 3.80 3.80 3.80 3.80 3.79 3.79 3.79 3.78 3.78 3.78 3.78 3.78 3.78 3.78 3.78 3.77 3.77 3.77 3.77 3.77 3.77 3.76 3.76 3.76 3.76 3.76 3.76 3.75 3.75 3.75 3.75 3.75 3.75 3.75 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.74 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.73 3.72 3.72 3.72 3.72 3.72 3.72 3.72 3.72 3.72 3.72 3.72 3.71 3.71 3.71 3.71 3.71 3.71 3.71 3.71 3.71 3.71 3.71 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.70 3.69 3.69 3.69 3.69 3.69 3.69 3.69 3.69 3.69 3.69 3.68 3.68 3.68 3.68 3.68 3.68 3.68 3.68 3.67 3.67 3.67 3.67 3.67 3.67 3.67 3.67 3.66 3.66 3.66 3.66 3.66 3.66 3.66 3.66 3.66 3.65 3.65 3.65 3.65 3.65 3.65 3.65 3.65 3.65 3.65 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.64 3.63 3.63 3.63 3.63 3.63 3.63 3.63 3.63 3.63 3.63 3.63 3.62 3.62 3.62 3.62 3.62 3.61 3.61 3.61 3.61 3.61 3.61 3.61 3.60 3.60 3.60 3.60 3.60 3.60 3.60 3.59 3.59 3.59 3.59 3.59 3.59 3.59 3.58 3.58 3.58 3.58 3.58 3.58 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.57 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.56 3.55 3.55 3.55 3.55 3.55 3.55 3.55 3.54 3.54 3.54 3.54 3.54 3.54 3.54 3.54 3.54 3.54 3.53 3.53 3.53 3.53 3.53 3.53 3.52 3.52 3.52 3.52 3.52 3.52 3.52 3.52 3.51 3.51 3.51 3.51 3.51 3.51 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.50 3.49 3.49 3.49 3.49 3.49 3.49 3.49 3.49 3.49 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.48 3.47 3.47 3.47 3.47 3.47 3.47 3.47 3.47 3.47 3.47 3.47 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.46 3.45 3.45 3.45 3.45 3.45 3.45 3.45 3.45 3.45 3.45 3.45 3.44 3.44 3.44 3.44 3.44 3.44 3.44 3.44 3.44 3.44 3.44 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.42 3.42 3.42 3.42 3.42 3.42 3.42 3.42 3.42 3.41 3.41 3.41 3.41 3.41 3.41 3.41 3.41 3.41 3.41 3.41 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.40 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.39 3.38 3.38 3.38 3.38 3.38 3.38 3.37 3.37 3.37 3.37 3.36 3.36 3.36 3.36 3.36 3.35 3.35 3.35 3.35 3.35 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.34 3.33 3.33 3.33 3.33 3.33 3.33 3.33 3.33 3.33 3.33 3.33 3.32 3.32 3.32 3.32 3.32 3.32 3.32 3.32 3.31 3.31 3.31 3.31 3.31 3.31 3.31 3.31 3.30 3.30 3.30 3.30 3.30 3.30 3.30 3.30 3.30 3.30 3.29 3.29 3.29 3.29 3.29 3.29 3.29 3.29 3.29 3.28 3.28 3.28 3.28 3.28 3.28 3.28 3.27 3.27 3.27 3.27 3.27 3.27 3.27 3.27 3.27 3.27 3.26 3.26 3.26 3.26 3.26 3.26 3.26 3.26 3.26 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.25 3.24 3.24 3.24 3.24 3.24 3.24 3.24 3.24 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.23 3.22 3.22 3.22 3.22 3.22 3.22 3.22 3.22 3.22 3.21 3.21 3.21 3.21 3.21 3.21 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.20 3.19 3.19 3.19 3.19 3.19 3.19 3.19 3.19 3.19 3.19 3.19 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.18 3.17 3.17 3.17 3.17 3.17 3.17 3.17 3.17 3.16 3.16 3.16 3.16 3.16 3.16 3.16 3.16 3.16 3.15 3.15 3.15 3.15 3.15 3.15 3.15 3.15 3.15 3.15 3.15 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.14 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.13 3.12 3.12 3.12 3.12 3.12 3.12 3.12 3.12 3.11 3.11 3.11 3.11 3.11 3.11 3.11 3.11 3.11 3.11 3.11 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.10 3.09 3.09 3.09 3.09 3.09 3.09 3.09 3.09 3.09 3.09 3.08 3.08 3.08 3.08 3.08 3.08 3.08 3.08 3.08 3.08 3.07 3.07 3.07 3.07 3.07 3.07 3.07 3.07 3.07 3.07 3.07 3.06 3.06 3.06 3.06 3.06 3.06 3.06 3.06 3.05 3.05 3.05 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.04 3.03 3.03 3.03 3.03 3.03 3.03 3.02 3.02 3.02 3.02 3.02 3.02 3.02 3.01 3.01 3.01 3.01 3.01 3.01 3.01 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 3.00 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.99 2.98 2.98 2.98 2.98 2.98 2.98 2.98 2.98 2.98 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.97 2.96 2.96 2.96 2.96 2.96 2.96 2.96 2.95 2.95 2.95 2.95 2.95 2.95 2.95 2.95 2.95 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.93 2.93 2.93 2.93 2.93 2.93 2.93 2.93 2.93 2.93 2.93 2.92 2.92 2.92 2.92 2.92 2.92 2.92 2.92 2.92 2.92 2.91 2.91 2.91 2.91 2.91 2.91 2.91 2.91 2.91 2.91 2.90 2.90 2.90 2.90 2.90 2.90 2.90 2.90 2.90 2.90 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.89 2.88 2.88 2.88 2.88 2.88 2.88 2.88 2.88 2.87 2.87 2.87 2.87 2.87 2.87 2.87 2.87 2.87 2.87 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.86 2.85 2.85 2.85 2.85 2.85 2.85 2.85 2.85 2.85 2.85 2.84 2.84 2.84 2.84 2.84 2.84 2.84 2.84 2.84 2.84 2.84 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.83 2.82 2.82 2.82 2.82 2.82 2.82 2.82 2.82 2.82 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.81 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.80 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.79 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.78 2.77 2.77 2.77 2.77 2.76 2.76 2.76 2.76 2.76 2.76 2.76 2.76 2.76 2.76 2.76 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.75 2.74 2.74 2.74 2.74 2.74 2.74 2.74 2.74 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.73 2.72 2.72 2.72 2.72 2.72 2.72 2.72 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.71 2.70 2.70 2.70 2.70 2.70 2.70 2.70 2.70 2.70 2.70 2.69 2.69 2.69 2.69 2.69 2.69 2.69 2.69 2.69 2.69 2.68 2.68 2.68 2.68 2.68 2.68 2.68 2.68 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.67 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.66 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.65 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.64 2.63 2.63 2.63 2.63 2.63 2.63 2.63 2.63 2.63 2.62 2.62 2.62 2.62 2.62 2.62 2.62 2.62 2.62 2.62 2.62 2.61 2.61 2.61 2.61 2.61 2.61'.split(' ').map(Number);
+const WEIGHT = new Map(ANSWERS.map((w, i) => [w, Math.pow(10, FREQ[i])]));
+const EXTRA = 'years games means hours looks asked heard words seems wants shows weeks takes areas books lives terms knows parts rules cases gives sales moved plans loved miles teams costs goals lines named names feels rates stars types ideas notes songs views users items tells units cards liked owned cells helps sites forms likes steps facts signs banks homes trees heads keeps shoes tests leads posts taxes films votes falls pages voted walls finds talks birds holds deals faces folks moves tools rooms roads ships doors seats tries bills kinds loans yards filed marks tears files hills minds woods roles wings opens foods kings cares hopes stops towns firms gifts lists races rocks bands lands waves cents meets risks bears roots shops texts drops jokes parks rings bones walks fewer gates hurts ruled cited dated acted seeds bonds tanks coins fails aimed boats reads suits wells burns picks wider hosts ranks rolls tasks trips beats mills winds sorts souls bored hated bucks camps meals codes grows knees lions acres fears fires hates sends twins beans farms flows genes lakes tours seeks tends zones cared loses pairs poems backs draws polls edges flags flies safer sells lords wears wives kicks ports rises saves heels rides crops pills joins nails socks tires buses paths peers ruins pulls roses urged exams spurs debts mates bulls lanes lungs modes dudes pipes locks newer packs cries downs drums bells ducks lasts bikes crews feeds hawks lacks raids sings fools leaks masks peaks pools jumps wiped acids aired cakes flaws halls hints seals wires pains poets rains pumps slots stems clues fuels grams tapes tunes dolls fries posed sands horns bites deeds poses rails skins watts doses fines hears nodes worms flats hairs plots beams lifts norms scars tones veins atoms maths memes myths opted aided belts coats cured icons limbs gases grabs lamps warns goats monks fills tiles fined spies beads caves hides urges tails waits baths gears diets cooks herbs hooks loops nicer chefs rests wards knots slams bolts gamer mails paved perks scans cites colts decks fares slips wills discs famed tents fixes highs raced casts coded isles rents roofs soils vines wraps claws docks earns frogs leafs overs aires bulbs dryer hyped exits dared mixes sails typed tyres heirs piers pleas spins taped idols sears shuts hires meats sheds spans crows grips plugs sinks tides visas liars ponds carts clans forks hacks hoops noses yells edits malls menus pines rites verbs cages cubes fists folds nests curls foxes muted aides fades heats melts mined pests salts crabs necks pores wipes desks disks fairs germs robes binds chops moons sighs ticks towed biker chats dunes moods racks scams coils leaps lends reefs cords dumps evils faked hunts bends brows cures fumes hikes hymns tombs solos swans temps heals irons seams vents dives flops tolls wasps boils flips harms aches joked ramps geeks leans lured nouns eased gowns kilos maids tiers cuffs drags fonts fours trays dukes fakes feats forts lambs looms pesos dares ovens pints pours aunts bouts goons herds lawns moths dries flaps slabs slums volts lumps soaps vests warms whips frees wares combs paces slaps pears fouls gents gusts skips swaps barns lobes clams golds grids hails moans ferns laces molds rants reels twigs canes ducts fleas mules vases arias deems doves hoods peeps prays riffs soups tufts booed goers duped fared hines inked puffs spits waxed beets fuses loner moles nicks deans gills mites raged rages zeros cools divas famer rarer slugs trams diced holed honed mocks muses ceded sores yanks buffs emits fangs mints reeds barks swims tamed typos vices warts booms dials domes gulls vials brews dorms gurus hoses mares stirs axles calms caved coals dined memos punks tarts bales clots colds dames dived odors plums snows kites haves hiked lures silos totes whims cuter dimes eases glows grads lifes pings yarns gasps mated pokes sages techs brats cysts epics iliad oaths roars sixes sodas sakes toads claps feuds hales helms hulls masts panes runes stuns flees nears rafts skits slits coups crocs duels earls kiwis soars halts raked sofas domed drips greys veils bores hauls hinds minas nines riled dents gazed grays heros meeks mists raves roped stubs yolks dales grins lurks wicks barbs erred foils gales mired reeks voids amped dunks peels pinks tusks winks clays clogs duets hares jeeps probs razed silks sills tilts chews curbs hawes howls moped buoys jocks mowed omens quads safes trims foams realy irked lobos pared pikes rifts sited beaks boars evers fords bakes pales reals elses skids zooms casks cribs kilns mitts omits rakes wests wiles bards caked lazer leeks serfs touts chins mazes plows blocs paras shins slats toyed liens obeys seeps brags glens pumas punts tacks torts yawns frets halos lopes pelts ricks shams sired snags stews waxes bared dawns dings lofts pasts swabs welds bunks coped foals mages oozes tucks blurs doers fells quips wowed aways feely gazes guava husks mikes pacts pithy sagas sayed tomes unsee washy wince birdy biter bloat bolus bursa bylaw chums crone decry downy exalt frith halve hamer jaunt khans knits louse mezzo nawab pangs peeks plies rabat rears rebut scrip sheaf snobs tater tiber tints alway axons bests douse gusty knell locum nooks snide sowed vamps baldy blobs bodes cased cates cocos corky dinar ditty droll fader feign harps leery lobed ovate peasy reams scabs soaks staid corks etude fleck fossa hocus knead lemur liken loons peony quant rebar retry sleds smock stags thins torus wahoo bails beaut catty fides hasta holla laver meted miser mises myrrh pappy poppa reedy rinks rooks roque segue slurp tubal twang whorl wordy arras bandy bendy cower cubby dimer flail hammy jawed larch milks nodal nosey radii rungs toddy writs altos anker batik evert gyrus miler pokey snafu spitz taupe testy trios usury veers betel borer chomp cubed culpa divan dixit dozed fasts hosed liana muggy passe peppy pucks purer quays rebus rosin shorn synch thorp tikka treks undid bruin chine crags creak datum exude feint furor karst lordy pater prion profs roams sires skimp toons wooed zippy bains droop lamas offal scowl shied sooty terns untie wifes bares butyl chars dotty droit dunce elope getup hight knave lauds mange matey motte paves preys raved sayer scrim taxon testa vapid annul bijou biota canna coves cress damme egged guppy neigh ogres oriel pires sager sulla tippy whelp wooly yorks acker ameer ashen augur balsa beady betas blurt borax curds drawl dupes grubs leggy lithe piney pulis snook strum yucky boles cheep colas joust ovals peaky penta preps pudgy ratty spuds xenia afire apace bogie buzzy coops copes emote gault glial gnats layed linky manse saute shand skied slyly spars tills trine zetas ambit avast basta belie calyx codon corns filer goner gongs hoots locos mutes paged papas putts scuff spats spews voles wails alles amide basso broil dears didst forme frack gruel joule kneed larks limos loach nonce pally param shure syncs unlit warps wisps aught belay bloop curio endow fosse krone leant livre lysis manes mooch musky rager robed sated singe sprig sways tarry afore alums boggy conic crier dines dower genet ghats glues imbue jinks kilts mutts ovoid plait seers shyly trike trots wispy ached begat clift cutty dowdy ennui foamy hants paean rayed sitar solly varus wryly zesty botch chafe clued coots cowed croak frizz hamed ingle lefts mealy panto purrs rimes saris taber trice whist woozy aleph aphid areal baste beget binks blare cagey corse creel ducal echos ligne minos miter nobly polyp pried punto runic sedge stile stunk ulnar umber umbra vagus wimps atria blips dirge dowel dozer gassy humus hurls ingot jammy motes pouty sence slink snead talus tinny tonks webby acrid auras beefs bigly caryl cleat dells dross gutta hanky herne humic linea shuck sigil sooth stilt caped fanon feder hulks iliac impel malts messe oases oiler sider soler spurn tarps wrung brier burro comas goldy gorse helio kazoo ketch monad scram sours strix tress wilts ameen ardor batts copse cowes cryer galls gulps oozed opals rares reaps salix sealy skein stele sumac venal wanes weepy yerba yodel antic bated brack compo conus dryly imago loris macaw manas manos medio metis pekin prods sinew snubs stang sulky tines yoked bardo barmy biles boyes cluck dumpy egret fests jeers jukes meads rinds scamp shuns spams spica swill weirs banca biked blain boric carbo ferri frill gilts hovel leman mimes mulls niner polos scree abuzz aller alpes amble armes bahar blots burry coked extol idler keels lochs loess opine paisa picot prana rater rumen smote solas soppy stupa vanes velar weald abled agger artes bogle coffs coram cored fetid frosh grump gyros jolts marly matin morne mucky payee peaty phono redid scull sella squib tapir waken bache dusts finis fount gamba grift nixed paled pecks scarp shoop skews soled soupy tings toros yogis youse abuts antis belch birks cento doled glace harts issei lulls marts matta peons theyd tizzy twits welts baler bocce bourg bunce burps chert deign elfin fazed galas hones lavas negus spink taluk upend viner clave cronk dolor eyrie flout fumed gamed hubba hyoid joist lites massy moats nervy parle porgy quand radix saner snips veuve aeons amani aurum balms bande blass boras borns bulla creat exons genii grama hooky khair octet perse recto slobs abies asana atman attar banga blick byway casco clunk croup crunk ebbed frond hadji hansa honks ilium kerns manis mesas mudra nobby pudge pulpy ritzy rives setae tench vater anent bluer burrs divvy feist hacky hinch homed hotch jiggy justo katha krona limps loamy podge quire recce rubes strop surfs terps tsars wrens agers aglow bando bogue carty chive chugs cordy feuer grebe gules haver huffy inder julep khadi newts plats ploys riles seely slims softy spall stoma swash tamas thana torii tyger welly wrack xylem boons briny croon culls cusps duals feria feted fonds gaily lippy llano maint matzo piezo pored stour techy tinea waker'.split(' ');
+const S = makeSolver(ANSWERS, EXTRA, { K: 1 });
+const OPENER = 'raise';
+const STATS = {"avg": "3.5", "worst": 6, "hist": {"1": 1, "2": 83, "3": 1098, "4": 746, "5": 118, "6": 14}};
+const UP = (w) => w.toUpperCase();
+
+/* ============ pixel helpers ============ */
+const INK = '#221a38';
+function mk(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); fn(x); return c; }
+function R(c, col, x, y, w, h) { c.fillStyle = col; c.fillRect(x, y, w, h); }
+function rects(c, list, fill, outline) {
+  if (outline) { c.fillStyle = outline; for (const [x, y, w, h] of list) c.fillRect(x - 1, y - 1, w + 2, h + 2); }
+  c.fillStyle = fill; for (const [x, y, w, h] of list) c.fillRect(x, y, w, h);
+}
+function hash(x, y, s = 0) { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+/* robot face (used in the lab + challenge) */
+function drawRobot(c, mood, t) {
+  c.clearRect(0, 0, 16, 16);
+  R(c, INK, 7, 0, 2, 3); R(c, (mood === 'think' && Math.floor(t / 300) % 2) ? '#ffd23f' : '#ff5a4a', 7, 0, 2, 2);
+  R(c, INK, 2, 3, 12, 10); R(c, '#c7d2dc', 3, 4, 10, 8); R(c, '#e6ecf1', 3, 4, 10, 2);
+  R(c, INK, 1, 6, 1, 4); R(c, INK, 14, 6, 1, 4);
+  const look = mood === 'think' ? (Math.floor(t / 400) % 2 ? 1 : -1) : 0;
+  const blink = Math.floor(t / 2600) % 7 === 0 && (t % 2600) < 160;
+  if (blink) { R(c, INK, 4, 7, 3, 1); R(c, INK, 9, 7, 3, 1); }
+  else { R(c, '#13a59f', 4, 6, 3, 3); R(c, '#13a59f', 9, 6, 3, 3); R(c, INK, 5 + look, 7, 1, 1); R(c, INK, 10 + look, 7, 1, 1); }
+  if (mood === 'happy') { R(c, INK, 5, 10, 6, 1); R(c, INK, 4, 9, 1, 1); R(c, INK, 11, 9, 1, 1); }
+  else if (mood === 'think') { R(c, INK, 6, 10, 4, 1); }
+  else { R(c, INK, 5, 10, 6, 1); }
+  R(c, INK, 4, 13, 8, 3); R(c, '#9aa7b8', 5, 13, 6, 2); R(c, '#ff7a3d', 7, 13, 2, 1);
+}
+const robotImg = mk(16, 16, (c) => drawRobot(c, 'idle', 1)).toDataURL();
+const gemImg = mk(16, 16, (c) => {
+  rects(c, [[5, 3, 6, 1], [4, 4, 8, 2], [3, 6, 10, 2], [4, 8, 8, 2], [5, 10, 6, 1], [6, 11, 4, 1], [7, 12, 2, 1]], '#14c4bb', INK);
+  R(c, '#9ff3ec', 5, 4, 2, 2); R(c, '#0b7570', 9, 7, 3, 2); R(c, '#ffffff', 6, 4, 1, 1);
+}).toDataURL();
+const rockImg = mk(16, 16, (c) => {
+  rects(c, [[3, 6, 10, 7], [4, 5, 8, 1], [2, 8, 12, 4]], '#8a7a6a', INK);
+  R(c, '#a8998a', 4, 6, 5, 2); R(c, '#6d6054', 9, 10, 4, 2);
+}).toDataURL();
+
+/* ============ scenes: every level is its own hand-drawn place ============ */
+const SW = 320, SH = 180;
+const canvas = $('#map'); const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+function disc(c, cx, cy, r, col) { c.fillStyle = col; for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); c.fillRect(cx - w, cy + y, w * 2 + 1, 1); } }
+function bands(c, cols, y0, y1) { const h = (y1 - y0) / cols.length; cols.forEach((col, i) => R(c, col, 0, Math.round(y0 + i * h), SW, Math.ceil(h) + 1)); }
+function seeded(n, seed) { let s = seed; const out = []; for (let i = 0; i < n; i++) { s = (s * 16807) % 2147483647; const a = s / 2147483647; s = (s * 16807) % 2147483647; const b = s / 2147483647; s = (s * 16807) % 2147483647; out.push([a, b, s / 2147483647]); } return out; }
+function cloud(c, x, y) { R(c, '#ffffff', x, y + 4, 26, 6); R(c, '#ffffff', x + 5, y, 11, 5); R(c, '#ffffff', x + 13, y + 1, 9, 4); R(c, '#dcefff', x, y + 9, 26, 1); }
+function palm(c, x, base, h, t, dark) {
+  const sway = Math.round(Math.sin(t / 900 + x) * 1.5);
+  const trunk = dark ? '#3a2340' : '#9b6b3e', leaf = dark ? '#3a2340' : '#3d9a52', leaf2 = dark ? '#3a2340' : '#5cc06b';
+  for (let i = 0; i < h; i += 3) { const bend = Math.round(Math.sin(i / h * 1.5) * 4) + (i > h * .7 ? sway : 0); if (!dark) R(c, INK, x + bend - 1, base - i - 3, 5, 4); R(c, trunk, x + bend, base - i - 3, 3, 3); }
+  const tx = x + 4 + sway + 1, ty = base - h - 2;
+  const fr = [[-14, 2, 13, 3], [2, 2, 13, 3], [-10, -3, 9, 3], [2, -3, 9, 3], [-3, -6, 7, 5], [-17, 5, 5, 3], [13, 5, 5, 3]];
+  if (!dark) rects(c, fr.map(([a, b, w, hh]) => [tx + a, ty + b, w, hh]), leaf, INK); else rects(c, fr.map(([a, b, w, hh]) => [tx + a, ty + b, w, hh]), leaf, null);
+  if (!dark) { R(c, leaf2, tx - 2, ty - 5, 4, 2); R(c, '#6b4a2b', tx - 2, ty + 2, 3, 3); R(c, '#6b4a2b', tx + 2, ty + 3, 3, 3); }
+}
+function starField(c, list, t, yMax) { for (const [a, b, k] of list) { const on = Math.sin(t / 400 + k * 40) > -0.3; R(c, on ? '#ffffff' : '#9a91bd', Math.floor(a * SW), Math.floor(b * yMax), 1, 1); } }
+function text(c, str, x, y, size, col, align) { c.font = `700 ${size}px "Pixelify Sans", monospace`; c.textAlign = align || 'left'; c.textBaseline = 'top'; c.fillStyle = col; c.fillText(str, x, y); c.textAlign = 'left'; }
+const STAR_A = seeded(60, 7), STAR_B = seeded(70, 11), CONF = seeded(46, 3), WIN_LIT = seeded(200, 19);
+const answeredQ = new Set();
+const robotSmall = mk(16, 16, () => {}); const robotSmallCtx = robotSmall.getContext('2d');
+
+const SCENES = {
+  /* 1. Orange County: a sunny street where Josh grew up */
+  home: { ground: 152, standX: 92, draw(c, t) {
+    bands(c, ['#6fc2ee', '#82cbf1', '#97d4f4', '#addef6', '#c4e8f8'], 0, 112);
+    disc(c, 272, 30, 15, '#fff3b0'); disc(c, 272, 30, 12, '#ffd23f');
+    for (const [bx, y, sp] of [[10, 16, .004], [130, 34, .006], [220, 10, .003], [300, 46, .005]]) cloud(c, ((bx + t * sp) % 380) - 50, y);
+    for (let x = 0; x < SW; x += 4) { const h = 14 + Math.round(Math.sin(x / 38) * 6 + Math.sin(x / 15) * 2); R(c, '#79b862', x, 112 - h, 4, h + 8); if ((x / 4) % 5 === 0) R(c, '#ff8c1a', x + 1, 112 - h + 5, 2, 2); }
+    R(c, '#5ea44a', 0, 112, SW, 4);
+    for (let x = 4; x < SW; x += 8) { R(c, INK, x, 112, 4, 16); R(c, '#ffffff', x + 1, 113, 2, 15); } R(c, INK, 0, 117, SW, 1); R(c, '#ffffff', 0, 118, SW, 2); R(c, INK, 0, 120, SW, 1);
+    for (let x = 0; x < SW; x += 16) R(c, (x / 16) % 2 ? '#74c556' : '#69b84c', x, 126, 16, 20);
+    // house
+    for (let y = 56; y <= 84; y++) { const half = Math.round((y - 56) * 2.1) + 6; R(c, INK, 206 - half - 1, y, half * 2 + 2, 1); R(c, '#7b8aa3', 206 - half, y, half * 2, 1); if (y % 4 === 0) R(c, '#66748c', 206 - half, y, half * 2, 1); }
+    disc(c, 206, 70, 4, INK); disc(c, 206, 70, 3, '#ffe7a3');
+    R(c, INK, 150, 84, 112, 62); R(c, '#f4efe4', 151, 85, 110, 60); R(c, '#e1d9c8', 151, 85, 110, 3);
+    R(c, INK, 156, 104, 40, 42); R(c, '#d8dde6', 157, 105, 38, 41); for (let y = 110; y < 146; y += 6) R(c, '#b9c0cc', 157, y, 38, 1);
+    R(c, INK, 208, 112, 18, 34); R(c, '#3c6fa6', 209, 113, 16, 33); R(c, '#ffd23f', 221, 128, 2, 2);
+    R(c, INK, 232, 98, 24, 18); R(c, '#ffe7a3', 233, 99, 22, 16); R(c, '#9cc6ec', 233, 99, 10, 6); R(c, INK, 243, 99, 1, 16); R(c, INK, 233, 106, 22, 1);
+    R(c, '#4f9e47', 230, 138, 28, 8); R(c, '#ff6f91', 234, 139, 3, 3); R(c, '#ffd23f', 244, 140, 3, 3); R(c, '#ff6f91', 252, 139, 3, 3);
+    // car in the driveway
+    R(c, INK, 160, 128, 40, 14); R(c, '#c8463a', 161, 129, 38, 12); R(c, INK, 167, 120, 24, 9); R(c, '#9cc6ec', 168, 121, 22, 7); R(c, '#dff1ff', 169, 122, 6, 2); R(c, INK, 179, 121, 1, 7);
+    R(c, '#e5685b', 161, 129, 38, 2); R(c, '#ffe7a3', 196, 132, 3, 3); R(c, '#ff5a4a', 161, 132, 2, 3);
+    disc(c, 169, 142, 5, INK); disc(c, 169, 142, 3, '#8f97a8'); disc(c, 191, 142, 5, INK); disc(c, 191, 142, 3, '#8f97a8');
+    // orange tree with a falling orange
+    R(c, INK, 121, 110, 8, 36); R(c, '#7a4e2c', 122, 111, 6, 35);
+    disc(c, 125, 100, 21, INK); disc(c, 125, 100, 20, '#2f7d3a'); disc(c, 120, 94, 11, '#4f9e47');
+    for (const [ox, oy] of [[-12, -4], [8, -10], [10, 6], [-4, 10], [-14, 8], [2, -2]]) { R(c, INK, 124 + ox, 99 + oy, 5, 5); R(c, '#ff8c1a', 125 + ox, 100 + oy, 3, 3); }
+    const fall = (t / 14) % 200; const oy = Math.min(146, 110 + Math.max(0, fall - 60)); R(c, INK, 136, oy - 1, 5, 5); R(c, '#ff8c1a', 137, oy, 3, 3);
+    // sprinkler
+    R(c, '#5a5f73', 268, 141, 3, 4);
+    for (let i = 0; i < 9; i++) { const k = ((t / 600) + i / 9) % 1; const sx = 269 + (i % 2 ? 1 : -1) * k * 26, sy = 141 - Math.sin(k * Math.PI) * 14; R(c, '#bfe6ff', Math.round(sx), Math.round(sy), 2, 2); }
+    // mailbox
+    R(c, INK, 141, 126, 2, 20); R(c, INK, 136, 120, 12, 8); R(c, '#e84a4a', 137, 121, 10, 6); R(c, '#ffd23f', 146, 118, 1, 4);
+    // sidewalk + street
+    R(c, '#d6d4cc', 0, 146, SW, 8); for (let x = 0; x < SW; x += 24) R(c, '#bdbab0', x, 146, 1, 8); R(c, INK, 0, 154, SW, 1);
+    R(c, '#5a5a6a', 0, 155, SW, 25); for (let x = 0; x < SW; x += 28) R(c, '#ffd23f', x + 6, 167, 14, 2);
+    palm(c, 30, 146, 110, t); palm(c, 296, 146, 96, t);
+  } },
+
+  /* 2. The beach at sunset, Westmont on the hill */
+  westmont: { ground: 162, standX: 92, draw(c, t) {
+    bands(c, ['#3b2d6e', '#5c3a82', '#8a4a8f', '#c45c88', '#ef7c78', '#ff9e6d', '#ffbe7a', '#ffd89a'], 0, 104);
+    disc(c, 232, 102, 24, '#ffe9a8'); disc(c, 232, 102, 20, '#ffd23f');
+    for (const [bx, y, sp] of [[40, 22, .003], [180, 12, .004]]) { const x = ((bx + t * sp) % 380) - 50; R(c, '#ffb38a', x, y, 30, 3); R(c, '#ff9e6d', x + 6, y - 2, 16, 2); }
+    for (let x = 0; x < 230; x += 2) { const h = 22 + Math.round(Math.abs(Math.sin(x / 34)) * 22 + Math.sin(x / 9) * 2) - Math.max(0, (x - 150) / 3); R(c, '#4b3567', x, 104 - h, 2, h); }
+    for (let x = 0; x < 120; x += 2) { const h = 14 + Math.round(Math.sin((x + 20) / 40) * 6); R(c, '#3f5f45', x, 104 - h, 2, h); }
+    R(c, INK, 34, 70, 48, 22); R(c, '#f6f1e7', 35, 74, 46, 18); R(c, '#c4472f', 34, 68, 48, 6); R(c, '#a63a26', 34, 73, 48, 1);
+    R(c, INK, 53, 56, 10, 14); R(c, '#f6f1e7', 54, 59, 8, 11); R(c, '#c4472f', 52, 55, 12, 4); R(c, '#d4a02c', 57, 62, 2, 3);
+    for (const wx of [39, 46, 67, 74]) { R(c, '#3c6fa6', wx, 79, 4, 6); }
+    R(c, '#7a4a2b', 56, 82, 4, 10); R(c, '#ffe7a3', 39, 79, 4, 2);
+    bands(c, ['#3a5f9e', '#3f72b0', '#4a86c2', '#5598cf', '#5fa6d8'], 104, 142);
+    for (let y = 106; y < 140; y += 3) { const w = 26 - (y - 104) / 3; if (Math.sin(t / 220 + y) > -0.4) R(c, '#ffd27a', 232 - w / 2 + Math.round(Math.sin(t / 300 + y) * 3), y, w, 1); }
+    const sbx = ((t * .004) % 380) - 30; R(c, '#f6f1e7', sbx, 103, 12, 2); R(c, '#ffffff', sbx + 5, 91, 1, 12); for (let k = 0; k < 9; k++) R(c, '#ffffff', sbx + 6, 92 + k, Math.max(1, k - 1), 1);
+    for (const [y, sp] of [[110, .012], [118, .018], [127, .024], [135, .03]]) for (let x = -40; x < SW; x += 46) R(c, '#cfe9ff', Math.round(x + (t * sp) % 46), y, 12, 1);
+    const fy = 141 + Math.round(Math.sin(t / 700) * 2);
+    R(c, '#e8c88f', 0, 140, SW, 6); R(c, '#ffffff', 0, fy, SW, 2); for (let x = 0; x < SW; x += 9) R(c, '#ffffff', x, fy + 2, 4, 1);
+    R(c, '#f3dcae', 0, 146, SW, 34); for (const [a, b] of seeded(40, 5)) R(c, '#e2c48d', Math.floor(a * SW), 148 + Math.floor(b * 30), 2, 1);
+    for (const [a, b] of seeded(6, 9)) { R(c, '#ffd0e0', Math.floor(a * SW), 160 + Math.floor(b * 16), 3, 2); }
+    R(c, INK, 252, 112, 2, 52); R(c, '#ffffff', 252, 113, 1, 50);
+    rects(c, [[234, 110, 38, 5], [240, 106, 26, 4], [248, 103, 10, 3]], '#ff5a4a', INK);
+    R(c, '#ffffff', 240, 110, 6, 5); R(c, '#ffffff', 254, 110, 6, 5); R(c, '#ffffff', 244, 106, 5, 4);
+    R(c, INK, 236, 166, 32, 6); R(c, '#4ab3ff', 237, 167, 30, 4); R(c, '#ffffff', 245, 167, 4, 4);
+    rects(c, [[290, 122, 8, 44], [291, 120, 6, 2]], '#ffd23f', INK); R(c, '#13a59f', 293, 122, 2, 44);
+    for (let i = 0; i < 3; i++) { const x = ((i * 120 + t * (.02 + i * .006)) % 380) - 30, y = 40 + i * 14 + Math.round(Math.sin(t / 300 + i) * 3); const w = Math.sin(t / 150 + i) > 0 ? 1 : 0; R(c, INK, x, y + w, 4, 1); R(c, INK, x + 4, y + 1, 1, 1); R(c, INK, x + 5, y + w, 4, 1); }
+    palm(c, 14, 150, 92, t, true); palm(c, 316, 150, 70, t, true);
+  } },
+
+  /* 3. Dorm room at night, where the first app was built */
+  arcade: { ground: 162, standX: 118, draw(c, t) {
+    R(c, '#2a2552', 0, 0, SW, 150); for (let x = 0; x < SW; x += 12) R(c, '#302a5e', x, 0, 4, 150);
+    R(c, '#231f46', 0, 140, SW, 10);
+    R(c, INK, 16, 38, 82, 70); R(c, '#c9b48a', 18, 40, 78, 66); R(c, '#141033', 22, 44, 70, 58);
+    for (const [a, b, k] of STAR_A) { if (a * 70 < 69 && b * 58 < 57) { const on = Math.sin(t / 380 + k * 50) > -0.2; R(c, on ? '#ffffff' : '#6b63a0', 22 + Math.floor(a * 70), 44 + Math.floor(b * 58), 1, 1); } }
+    disc(c, 76, 58, 8, '#fff3c4'); disc(c, 79, 56, 7, '#141033');
+    R(c, '#c9b48a', 56, 44, 3, 58); R(c, '#c9b48a', 22, 72, 70, 3);
+    R(c, '#4b6aa8', 22, 100, 70, 4); R(c, INK, 14, 104, 86, 4); R(c, '#e8d6ad', 15, 105, 84, 2);
+    R(c, INK, 110, 42, 32, 42); R(c, '#ff7a3d', 111, 43, 30, 40); disc(c, 126, 60, 9, '#13a59f'); R(c, '#ffd23f', 113, 60, 26, 2); R(c, '#ffffff', 115, 74, 22, 3);
+    R(c, INK, 108, 94, 54, 4); R(c, '#8a5a3c', 109, 95, 52, 2);
+    [['#e84a4a', 10], ['#4ab3ff', 8], ['#ffd23f', 12], ['#57a54b', 9], ['#ff6f91', 11], ['#c7d2dc', 7]].reduce((x, [col, h]) => { R(c, INK, x, 94 - h, 7, h); R(c, col, x + 1, 95 - h, 5, h - 1); return x + 8; }, 111);
+    // light from the screen
+    c.globalAlpha = .1 + .03 * Math.sin(t / 300); R(c, '#9fd8ee', 166, 40, 150, 110); c.globalAlpha = 1;
+    // desk
+    R(c, INK, 168, 112, 148, 7); R(c, '#8a5a3c', 169, 113, 146, 5); R(c, INK, 174, 119, 6, 44); R(c, INK, 304, 119, 6, 44); R(c, '#6b4226', 175, 119, 4, 43); R(c, '#6b4226', 305, 119, 4, 43);
+    R(c, INK, 182, 119, 50, 26); R(c, '#7a4e33', 183, 120, 48, 24); R(c, '#ffd23f', 205, 131, 4, 2);
+    // monitor with the first app running on it
+    R(c, INK, 238, 102, 8, 10); R(c, INK, 226, 110, 32, 3);
+    R(c, INK, 194, 48, 96, 56); R(c, '#9fd8ee', 197, 51, 90, 50); R(c, '#f3dcae', 197, 92, 90, 9); R(c, '#3aa3d4', 197, 86, 90, 6);
+    for (let i = 0; i < 3; i++) { R(c, INK, 268, 84 - i * 8, 9, 8); R(c, '#c0843f', 269, 85 - i * 8, 7, 6); }
+    const k = (t % 2600) / 2600; for (let j = 0; j <= 10; j++) { const q = Math.min(k, j / 10); const xx = 206 + q * 58, yy = 88 - Math.sin(q * Math.PI * .95) * 30; if (j / 10 <= k) R(c, '#ffffff', Math.round(xx), Math.round(yy), 1, 1); }
+    const bx = 206 + k * 58, by = 88 - Math.sin(k * Math.PI * .95) * 30; R(c, INK, Math.round(bx) - 2, Math.round(by) - 2, 5, 5); R(c, '#ff5a4a', Math.round(bx) - 1, Math.round(by) - 1, 3, 3);
+    R(c, INK, 202, 86, 6, 4); R(c, '#13a59f', 203, 87, 4, 2);
+    R(c, INK, 212, 106, 48, 6); R(c, '#3b3f55', 213, 107, 46, 4); for (let x = 215; x < 258; x += 4) R(c, Math.sin(t / 90 + x) > .6 ? '#ffffff' : '#7b7f94', x, 108, 2, 1);
+    R(c, INK, 286, 100, 12, 12); R(c, '#ff7a3d', 287, 101, 10, 10); R(c, INK, 297, 103, 3, 5);
+    for (let i = 0; i < 3; i++) { const s = ((t / 900) + i / 3) % 1; c.globalAlpha = 1 - s; R(c, '#ffffff', 290 + Math.round(Math.sin(s * 6 + i) * 2), 98 - s * 20, 2, 2); } c.globalAlpha = 1;
+    R(c, INK, 172, 104, 26, 9); R(c, '#e3b26a', 173, 105, 24, 7); R(c, '#c99248', 173, 108, 24, 1);
+    // floor + rug
+    R(c, '#6b4a3a', 0, 150, SW, 30); for (let y = 156; y < SH; y += 7) R(c, '#5a3d30', 0, y, SW, 1); for (let x = 0; x < SW; x += 37) R(c, '#5a3d30', x + ((x / 37) % 2) * 18, 150, 1, 30);
+    for (let y = 0; y < 14; y++) { const w = Math.round(Math.sqrt(1 - ((y - 7) / 7.5) ** 2) * 60); R(c, y % 4 ? '#4b3b78' : '#6d5aa6', 100 - w, 160 + y, w * 2, 1); }
+  } },
+
+  /* 4. Graduation day on stage */
+  grad: { ground: 140, standX: 104, draw(c, t) {
+    for (let x = 0; x < SW; x += 10) { R(c, '#4b2a75', x, 0, 10, 130); R(c, '#3a1f5c', x + 6, 0, 4, 130); R(c, '#5a3488', x + 1, 0, 2, 130); }
+    for (let x = 0; x < SW; x += 16) { R(c, '#8a2b3f', x, 0, 16, 10); disc(c, x + 8, 10, 7, '#8a2b3f'); R(c, '#ffd23f', x, 9, 16, 1); }
+    c.globalAlpha = .14 + .03 * Math.sin(t / 500);
+    c.fillStyle = '#fff6c8'; c.beginPath(); c.moveTo(40, 0); c.lineTo(70, 0); c.lineTo(150, 140); c.lineTo(60, 140); c.fill();
+    c.beginPath(); c.moveTo(250, 0); c.lineTo(280, 0); c.lineTo(270, 140); c.lineTo(180, 140); c.fill(); c.globalAlpha = 1;
+    R(c, INK, 54, 70, 212, 20); R(c, '#ffd23f', 55, 71, 210, 18); R(c, INK, 54, 62, 1, 9); R(c, INK, 265, 62, 1, 9);
+    text(c, 'CONGRATS, GRADUATES!', 160, 75, 10, INK, 'center');
+    R(c, '#a0703f', 0, 126, SW, 16); for (let x = 0; x < SW; x += 22) R(c, '#8a5f33', x, 126, 1, 16); R(c, '#b98448', 0, 126, SW, 2);
+    R(c, INK, 0, 142, SW, 3); R(c, '#5a2f2f', 0, 145, SW, 35); for (let x = 0; x < SW; x += 40) R(c, '#4a2525', x, 145, 2, 35);
+    R(c, INK, 222, 98, 34, 30); R(c, '#6b4226', 223, 99, 32, 28); R(c, '#8a5a3c', 223, 99, 32, 4); disc(c, 239, 114, 6, '#2f4b8a'); disc(c, 239, 114, 4, '#ffd23f');
+    R(c, INK, 238, 86, 2, 13); disc(c, 239, 85, 2, '#3b3f55');
+    for (let i = 0; i < 6; i++) {
+      const ph = i * 1.3, x = 150 + i * 26 + Math.round(Math.sin(t / 900 + ph) * 6), y = 120 - Math.abs(Math.sin(t / 750 + ph)) * 70;
+      R(c, INK, x - 6, y - 1, 13, 4); R(c, '#221a38', x - 5, y, 11, 2); R(c, INK, x - 3, y + 2, 7, 3); R(c, '#ffd23f', x + 4, y + 1, 1, 4);
+    }
+    for (const [a, b, k] of CONF) { const x = Math.floor(a * SW + Math.sin(t / 700 + k * 9) * 6), y = Math.floor((b * 200 + t * .03 * (1 + k)) % 200) - 10; R(c, ['#ff7a3d', '#13a59f', '#ffd23f', '#ff6f91', '#4ab3ff', '#ffffff'][Math.floor(k * 6)], x, y, 2, 2); }
+    for (let i = 0; i < 22; i++) { const x = i * 15 + 4, bob = Math.round(Math.sin(t / 260 + i * 1.7) * 1.5); disc(c, x + 5, 166 + bob, 5, '#1a1530'); R(c, '#1a1530', x - 1, 171 + bob, 13, 10); }
+  } },
+
+  /* 5. Tyler office: two teams of four engineers */
+  tyler: { ground: 164, standX: 66, draw(c, t) {
+    bands(c, ['#dfe7ee', '#d7e0e8', '#cfd9e3'], 0, 150);
+    R(c, INK, 170, 16, 144, 76); R(c, '#9aa3ad', 171, 17, 142, 74);
+    R(c, '#bfe3f7', 174, 20, 136, 68);
+    for (const [a, b] of seeded(12, 21)) { const x = 174 + Math.floor(a * 126), h = 20 + Math.floor(b * 40); R(c, '#8fa6bf', x, 88 - h, 12, h); for (let y = 88 - h + 3; y < 86; y += 5) R(c, '#bcd0e4', x + 3, y, 2, 2); }
+    for (let x = 174; x < 310; x += 34) R(c, '#9aa3ad', x + 32, 20, 3, 68); R(c, '#9aa3ad', 174, 52, 136, 2);
+    // whiteboard with the two teams
+    R(c, INK, 12, 56, 120, 64); R(c, '#9aa3ad', 13, 57, 118, 62); R(c, '#ffffff', 15, 59, 114, 58);
+    text(c, 'TEAM 1', 42, 62, 8, '#2f4b8a', 'center'); text(c, 'TEAM 2', 102, 62, 8, '#c45c2b', 'center');
+    for (let tm = 0; tm < 2; tm++) for (let i = 0; i < 4; i++) { const x = 22 + tm * 60 + (i % 2) * 22, y = 76 + Math.floor(i / 2) * 14; disc(c, x + 4, y, 3, tm ? '#ff7a3d' : '#4a6bb0'); R(c, tm ? '#ff7a3d' : '#4a6bb0', x, y + 4, 9, 4); }
+    R(c, '#c7d2dc', 72, 70, 1, 32);
+    text(c, answeredQ.has('tyler-3') ? '2 x 4 = 8' : '2 x 4 = ?', 72, 105, 8, INK, 'center');
+    R(c, INK, 20, 120, 104, 3); R(c, '#e84a4a', 98, 118, 10, 2); R(c, '#2f4b8a', 110, 118, 10, 2);
+    disc(c, 150, 40, 9, INK); disc(c, 150, 40, 8, '#ffffff'); const ang = t / 1500; R(c, INK, 150, 40, 1, 1);
+    for (let r = 0; r < 7; r++) R(c, INK, Math.round(150 + Math.sin(ang) * r), Math.round(40 - Math.cos(ang) * r), 1, 1);
+    for (let r = 0; r < 5; r++) R(c, '#e84a4a', Math.round(150 + Math.sin(ang / 12) * r), Math.round(40 - Math.cos(ang / 12) * r), 1, 1);
+    // 8 engineers in two pods
+    const shirts = ['#4a6bb0', '#57a54b', '#e84a4a', '#ffd23f', '#13a59f', '#ff6f91', '#8a4a8f', '#ff7a3d'], hair = ['#5a3a22', '#221a38', '#c98a3a', '#5a3a22', '#8a3a22', '#221a38', '#d9c27a', '#5a3a22'];
+    for (let p = 0; p < 2; p++) {
+      const px = 150 + p * 86;
+      R(c, INK, px - 2, 126, 82, 5); R(c, '#c8a77e', px - 1, 127, 80, 3); R(c, INK, px, 131, 3, 20); R(c, INK, px + 75, 131, 3, 20);
+      for (let k = 0; k < 4; k++) {
+        const n = p * 4 + k, ex = px + 2 + k * 19, bob = Math.sin(t / 120 + n * 2) > 0 ? 1 : 0;
+        disc(c, ex + 8, 104, 5, INK); disc(c, ex + 8, 104, 4, '#f0c19a'); R(c, hair[n], ex + 4, 99, 9, 3);
+        R(c, INK, ex + 2, 109, 13, 18); R(c, shirts[n], ex + 3, 110, 11, 16);
+        R(c, INK, ex, 111, 18, 14); R(c, '#1d2b44', ex + 1, 112, 16, 12);
+        for (let l = 0; l < 3; l++) R(c, ['#6fe3d6', '#ffd76e', '#ff9e6d'][(l + n) % 3], ex + 3 + (l % 2) * 2, 114 + l * 3, 4 + ((Math.floor(t / 400) + l + n) % 6), 1);
+        R(c, INK, ex + 7, 124, 4, 2); R(c, '#f0c19a', ex + 3 + bob, 124, 3, 2); R(c, '#f0c19a', ex + 12 - bob, 124, 3, 2);
+      }
+    }
+    R(c, INK, 300, 132, 14, 18); R(c, '#c45c2b', 301, 133, 12, 16); disc(c, 307, 124, 10, '#3f8f3f'); disc(c, 304, 120, 5, '#5fb85a');
+    R(c, '#9aa8b8', 0, 150, SW, 30); for (let x = 0; x < SW; x += 20) for (let y = 150; y < SH; y += 10) if ((x / 20 + (y - 150) / 10) % 2) R(c, '#8f9db0', x, y, 20, 10);
+    R(c, INK, 0, 149, SW, 1);
+  } },
+
+  /* 6. Politheon: a startup on a city rooftop at night */
+  politheon: { ground: 164, standX: 88, draw(c, t) {
+    bands(c, ['#120d2b', '#1a1440', '#231a54', '#2e2266', '#3b2a72'], 0, 140);
+    starField(c, STAR_B, t, 80);
+    disc(c, 40, 30, 9, '#fff3c4'); disc(c, 44, 27, 8, '#1a1440');
+    let i = 0;
+    for (let x = 0; x < SW; x += 18) { const [a, b] = WIN_LIT[i++]; const h = 40 + Math.floor(a * 40); R(c, '#2b2b58', x, 140 - h, 16, h); for (let y = 140 - h + 4; y < 136; y += 6) for (let wx = 3; wx < 14; wx += 5) { const [q] = WIN_LIT[(x + y + wx) % 200]; if ((q + Math.floor(t / 2200) * .37) % 1 > .45) R(c, '#ffe27a', x + wx, y, 2, 3); } }
+    R(c, '#1a1a38', 116, 30, 4, 20); R(c, '#1a1a38', 112, 50, 12, 10); R(c, '#1a1a38', 106, 60, 24, 80); R(c, '#ff5a4a', 117, 28, 2, 2);
+    for (let x = 0; x < SW; x += 26) { if (x > 96 && x < 134) continue; const [a] = WIN_LIT[(x * 3) % 200]; const h = 30 + Math.floor(a * 30); R(c, '#1c1c3c', x, 140 - h, 22, h); for (let y = 140 - h + 4; y < 138; y += 7) R(c, Math.sin(x + y + Math.floor(t / 1800)) > .2 ? '#ffd23f' : '#2a2a50', x + 4, y, 3, 3); }
+    // the startup rocket taking off
+    const k = (t % 7000) / 7000; const ry = 150 - k * 190, rx = 268 + Math.round(Math.sin(k * 6) * 2);
+    for (let j = 1; j < 8; j++) { c.globalAlpha = Math.max(0, .5 - j * .06); disc(c, rx + 3 + Math.round(Math.sin(j + t / 200) * 2), Math.round(ry + 22 + j * 7), 3 + j, '#c9c2e6'); } c.globalAlpha = 1;
+    const fl = Math.floor(t / 70) % 2; R(c, '#ff7a3d', rx + 1, ry + 18, 5, 4 + fl * 2); R(c, '#ffd23f', rx + 2, ry + 18, 3, 3 + fl);
+    rects(c, [[rx, ry + 4, 7, 14], [rx + 1, ry + 1, 5, 3], [rx + 2, ry, 3, 1], [rx - 2, ry + 13, 2, 5], [rx + 7, ry + 13, 2, 5]], '#ffffff', INK);
+    R(c, '#13a59f', rx + 2, ry + 7, 3, 3); R(c, '#e84a4a', rx - 2, ry + 15, 2, 3); R(c, '#e84a4a', rx + 7, ry + 15, 2, 3);
+    // neon sign
+    R(c, INK, 160, 120, 2, 26); R(c, INK, 296, 120, 2, 26);
+    R(c, INK, 150, 100, 158, 22); R(c, '#1a1530', 151, 101, 156, 20);
+    const glow = .6 + .4 * Math.abs(Math.sin(t / 600)); c.globalAlpha = glow * .35; R(c, '#3be0d0', 148, 98, 162, 26); c.globalAlpha = glow;
+    text(c, 'POLITHEON', 229, 104, 13, '#3be0d0', 'center'); c.globalAlpha = 1;
+    // roof + string lights
+    R(c, '#4a4870', 0, 144, SW, 4); R(c, '#2a2840', 0, 148, SW, 32); for (let x = 0; x < SW; x += 32) R(c, '#232138', x, 148, 1, 32);
+    for (let x = 0; x <= SW; x += 2) { const y = 126 + Math.round(Math.sin((x % 160) / 160 * Math.PI) * 10); R(c, '#14112a', x, y, 2, 1); if (x % 14 === 0) { const on = Math.floor(t / 400 + x / 14) % 3; R(c, ['#ffd23f', '#ff6f91', '#3be0d0'][on], x, y + 1, 2, 2); } }
+    R(c, INK, 20, 150, 26, 14); R(c, '#4f9e47', 21, 146, 24, 6); R(c, '#8f97a8', 21, 151, 24, 12);
+  } },
+
+  /* 7. The Robot Lab */
+  lab: { ground: 166, standX: 78, draw(c, t) {
+    bands(c, ['#0d2830', '#10303a', '#123842'], 0, 150);
+    for (let x = 0; x < SW; x += 16) R(c, '#174652', x, 0, 1, 150); for (let y = 0; y < 150; y += 16) R(c, '#174652', 0, y, SW, 1);
+    R(c, INK, 0, 58, SW, 8); R(c, '#3a5a66', 0, 59, SW, 6); for (let x = 20; x < SW; x += 60) { R(c, INK, x, 56, 8, 12); R(c, '#5a7a86', x + 1, 57, 6, 10); }
+    for (let i = 0; i < 2; i++) {
+      const x = 14 + i * 32, lvl = 92 + Math.round(Math.sin(t / 800 + i * 2) * 4);
+      R(c, INK, x - 1, 68, 24, 84); R(c, '#2a4a52', x, 69, 22, 82); R(c, i ? '#ff6f91' : '#3be0a0', x + 2, lvl, 18, 150 - lvl); c.globalAlpha = .35; R(c, '#bff7ef', x + 2, 70, 4, 80); c.globalAlpha = 1;
+      for (let b = 0; b < 4; b++) { const s = ((t / 1400) + b / 4 + i * .3) % 1; R(c, '#e6fff9', x + 6 + ((b * 5) % 12), Math.round(148 - s * (148 - lvl)), 2, 2); }
+      R(c, INK, x - 3, 64, 28, 6); R(c, '#5a7a86', x - 2, 65, 26, 4); R(c, INK, x - 3, 150, 28, 4);
+    }
+    R(c, INK, 102, 74, 78, 50); R(c, '#0a1c22', 104, 76, 74, 46);
+    const PAT = [[0, 1, 0, 0, 2], [2, 0, 1, 0, 2], [2, 2, 2, 2, 2]]; const COLS = ['#7a808b', '#d2a92a', '#57a54b'];
+    const reveal = Math.floor(t / 350) % 22;
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 5; k++) { const n = r * 5 + k; R(c, n < reveal ? COLS[PAT[r][k]] : '#203840', 110 + k * 13, 80 + r * 13, 11, 11); }
+    for (let k = 0; k < 8; k++) R(c, Math.floor(t / 200 + k * 3) % 4 === 0 ? '#ff5a4a' : (k % 2 ? '#3be0a0' : '#4ab3ff'), 106 + k * 9, 128, 5, 3);
+    R(c, INK, 102, 126, 78, 1);
+    // the big robot
+    drawRobot(robotSmallCtx, Math.floor(t / 3000) % 3 === 2 ? 'think' : 'happy', t);
+    R(c, INK, 196, 146, 92, 6); R(c, '#3a4a5a', 197, 147, 90, 4);
+    c.drawImage(robotSmall, 202, 66, 80, 80);
+    c.globalAlpha = .18 + .08 * Math.sin(t / 400); disc(c, 242, 106, 52, '#3be0d0'); c.globalAlpha = 1; c.drawImage(robotSmall, 202, 66, 80, 80);
+    R(c, '#0c2228', 0, 150, SW, 30); R(c, '#3be0d0', 0, 150, SW, 1);
+    for (let k = -8; k <= 8; k++) { for (let y = 150; y < SH; y += 2) { const x = 160 + k * 20 * (1 + (y - 150) / 12); R(c, '#1f5560', Math.round(x), y, 1, 2); } }
+    for (const y of [155, 162, 171]) R(c, '#1f5560', 0, y, SW, 1);
+  } },
+};
+const SCENE_IDS = ['home', 'westmont', 'arcade', 'grad', 'tyler', 'politheon', 'lab'];
+
+/* the player (Josh) drawn from rectangles: 4 directions, 2 walk frames */
+function drawJosh(c, X, Y, dir, frame) {
+  const f = frame ? 1 : 0;
+  R(c, 'rgba(30,20,50,.25)', X + 3, Y + 14, 10, 2);
+  const HAIR = '#5a3a22', SKIN = '#f0c19a', SHIRT = '#13a59f', SHIRT2 = '#0b7570', JEAN = '#3d5a99', SHOE = INK, PACK = '#c9622f';
+  if (dir === 'down' || dir === 'up') {
+    rects(c, [[5, 10 - (f ? 1 : 0), 2, 4 + (f ? 1 : 0)], [9, 10, 2, 4 - (f ? 1 : 0)]].map(([x, y, w, h]) => [X + x, Y + y, w, h]), JEAN, INK);
+    R(c, SHOE, X + 5, Y + 13 + (f ? 0 : 0), 2, 1); R(c, SHOE, X + 9, Y + 13 - (f ? 1 : 0), 2, 1);
+    rects(c, [[X + 4, Y + 7, 8, 4]], SHIRT, INK);
+    rects(c, [[X + 3, Y + 7 + (f ? 1 : 0), 1, 3], [X + 12, Y + 7 + (f ? 0 : 1), 1, 3]], SKIN, INK);
+    rects(c, [[X + 4, Y + 1, 8, 6]], SKIN, INK);
+    if (dir === 'down') {
+      R(c, HAIR, X + 4, Y + 1, 8, 2); R(c, HAIR, X + 4, Y + 3, 1, 2); R(c, HAIR, X + 11, Y + 3, 1, 1);
+      R(c, INK, X + 6, Y + 4, 1, 2); R(c, INK, X + 9, Y + 4, 1, 2); R(c, '#e59a7a', X + 7, Y + 6, 2, 1);
+      R(c, SHIRT2, X + 4, Y + 10, 8, 1); R(c, PACK, X + 4, Y + 7, 1, 3); R(c, PACK, X + 11, Y + 7, 1, 3);
+    } else {
+      R(c, HAIR, X + 4, Y + 1, 8, 6);
+      rects(c, [[X + 5, Y + 7, 6, 4]], PACK, INK); R(c, '#e07a42', X + 6, Y + 8, 4, 1);
+    }
+  } else {
+    const s = dir === 'left' ? -1 : 1; const mx = (x, w) => s > 0 ? X + x : X + 16 - x - w;
+    const legA = f ? [[6, 10, 2, 4], [9, 10, 2, 3]] : [[7, 10, 2, 4], [8, 10, 2, 4]];
+    rects(c, legA.map(([x, y, w, h]) => [mx(x, w), Y + y, w, h]), JEAN, INK);
+    rects(c, [[mx(5, 6), Y + 7, 6, 4]], SHIRT, INK);
+    rects(c, [[mx(3, 2), Y + 7, 2, 4]], PACK, INK);
+    rects(c, [[mx(8 + (f ? 1 : 0), 1), Y + 8, 1, 3]], SKIN, INK);
+    rects(c, [[mx(5, 7), Y + 1, 7, 6]], SKIN, INK);
+    R(c, HAIR, mx(5, 7), Y + 1, 7, 2); R(c, HAIR, mx(5, 3), Y + 3, 3, 2);
+    R(c, INK, mx(10, 1), Y + 4, 1, 2); R(c, '#e59a7a', mx(11, 1), Y + 6, 1, 1);
+  }
+}
+/* Josh, drawn from photos: dirty-blonde swept-back hair, mustache, brown polo, dark pants, white sneakers. 20 x 32 sprite. */
+const JC = { k: '#2a1d1a', h: '#b8955c', H: '#dcc08c', d: '#8f6d40', s: '#ecbb97', S: '#d39a77', m: '#8a6238', b: '#6e4636', B: '#583528', c: '#85563f', n: '#25232d', N: '#3a3746', o: '#efebe3', O: '#c9c3b7', e: '#2a1d1a', t: '#ffffff' };
+function drawJosh2(c, X, Y, dir, frame) {
+  const P = (col, x, y, w, h) => { c.fillStyle = col; c.fillRect(X + x, Y + y, w, h); };
+  const O = (list, fill) => { c.fillStyle = JC.k; for (const [x, y, w, h] of list) c.fillRect(X + x - 1, Y + y - 1, w + 2, h + 2); c.fillStyle = fill; for (const [x, y, w, h] of list) c.fillRect(X + x, Y + y, w, h); };
+  const f = frame ? 1 : 0;
+  if (dir === 'down' || dir === 'up') {
+    // legs + shoes
+    const lA = f ? 1 : 0, lB = f ? 0 : 0;
+    O([[6, 23, 3, 6 - lA], [11, 23, 3, 6]], JC.n); P(JC.N, 6, 23, 1, 5 - lA); P(JC.N, 11, 23, 1, 5);
+    O([[5, 29 - lA, 4, 2]], JC.o); O([[11, 29, 4, 2]], JC.o); P(JC.O, 5, 30 - lA, 4, 1); P(JC.O, 11, 30, 4, 1);
+    // torso (polo)
+    O([[4, 15, 12, 8]], JC.b); P(JC.B, 13, 16, 3, 7); P(JC.B, 4, 22, 12, 1); P('#3a2a20', 4, 22, 12, 1);
+    // arms
+    O([[2, 15, 2, 3], [16, 15, 2, 3]], JC.b);
+    O([[2, 18 + (f ? 1 : 0), 2, 4], [16, 18 + (f ? 0 : 1), 2, 4]], JC.s); P(JC.S, 17, 18 + (f ? 0 : 1), 1, 4);
+    if (dir === 'down') {
+      P(JC.c, 6, 15, 3, 2); P(JC.c, 11, 15, 3, 2); P(JC.s, 9, 15, 2, 3); P(JC.S, 9, 17, 2, 1);
+      // neck + head
+      O([[8, 13, 4, 2]], JC.s); P(JC.S, 8, 14, 4, 1);
+      O([[5, 4, 10, 9], [6, 13, 8, 1]], JC.s);
+      P(JC.S, 13, 5, 2, 8); P(JC.S, 6, 13, 8, 1);
+      O([[4, 7, 1, 3], [15, 7, 1, 3]], JC.s);
+      // hair: swept back with a soft middle part
+      O([[5, 0, 10, 4], [4, 2, 2, 5], [14, 2, 2, 5]], JC.h);
+      P(JC.H, 6, 1, 3, 1); P(JC.H, 11, 1, 3, 1); P(JC.H, 5, 2, 2, 1); P(JC.H, 13, 2, 2, 1);
+      P(JC.d, 9, 0, 2, 2); P(JC.d, 4, 5, 1, 2); P(JC.d, 15, 5, 1, 2); P(JC.h, 6, 4, 2, 1); P(JC.h, 12, 4, 2, 1);
+      // face
+      P(JC.d, 6, 6, 3, 1); P(JC.d, 11, 6, 3, 1);
+      P(JC.e, 7, 7, 1, 2); P(JC.e, 12, 7, 1, 2); P('#ffffff', 8, 7, 1, 1); P('#ffffff', 13, 7, 1, 1);
+      P(JC.S, 9, 8, 2, 2);
+      P(JC.m, 7, 10, 6, 1); P(JC.m, 6, 11, 2, 1); P(JC.m, 12, 11, 2, 1); P(JC.m, 8, 10, 4, 1);
+      P(JC.t, 8, 11, 4, 1); P('#c4706a', 8, 12, 4, 1);
+    } else {
+      O([[8, 13, 4, 2]], JC.s);
+      O([[5, 3, 10, 10]], JC.h); O([[5, 0, 10, 4], [4, 2, 12, 6]], JC.h);
+      P(JC.H, 6, 1, 3, 1); P(JC.H, 11, 1, 3, 1); P(JC.H, 7, 4, 6, 1); P(JC.d, 5, 10, 10, 2); P(JC.d, 9, 0, 2, 2);
+      P(JC.s, 4, 7, 1, 3); P(JC.s, 15, 7, 1, 3);
+    }
+  } else {
+    const s = dir === 'left' ? -1 : 1;
+    const M = (x, w) => (s > 0 ? x : 20 - x - w);
+    const Pm = (col, x, y, w, h) => P(col, M(x, w), y, w, h);
+    const Om = (list, fill) => O(list.map(([x, y, w, h]) => [M(x, w), y, w, h]), fill);
+    // legs mid-stride
+    if (f) { Om([[6, 23, 3, 6], [11, 23, 3, 6]], JC.n); Om([[4, 29, 5, 2], [11, 29, 5, 2]], JC.o); Pm(JC.O, 4, 30, 5, 1); Pm(JC.O, 11, 30, 5, 1); }
+    else { Om([[8, 23, 4, 6]], JC.n); Pm(JC.N, 8, 23, 1, 6); Om([[8, 29, 6, 2]], JC.o); Pm(JC.O, 8, 30, 6, 1); }
+    Om([[6, 15, 9, 8]], JC.b); Pm(JC.B, 6, 16, 2, 7); Pm('#3a2a20', 6, 22, 9, 1);
+    Om([[9 + (f ? 1 : 0), 15, 3, 3]], JC.c); Om([[9 + (f ? 2 : 0), 18, 3, 4]], JC.s);
+    Om([[9, 13, 4, 2]], JC.s);
+    Om([[6, 3, 9, 10], [8, 13, 6, 1]], JC.s); Pm(JC.s, 15, 8, 1, 1); Pm(JC.k, 16, 8, 1, 1);
+    Pm(JC.S, 6, 4, 2, 9);
+    Om([[5, 0, 9, 4], [4, 2, 5, 7]], JC.h);
+    Pm(JC.H, 7, 1, 4, 1); Pm(JC.H, 5, 3, 2, 1); Pm(JC.d, 4, 7, 4, 2); Pm(JC.h, 11, 3, 3, 1);
+    Pm(JC.S, 8, 7, 2, 3); Pm(JC.s, 8, 7, 1, 2);
+    Pm(JC.d, 11, 6, 3, 1); Pm(JC.e, 12, 7, 1, 2);
+    Pm(JC.m, 11, 10, 5, 1); Pm(JC.m, 12, 11, 2, 1);
+    Pm(JC.t, 14, 11, 1, 1);
+  }
+}
+
+/* Josh v3, drawn from photos: curtain hair with a middle part (light brown, blonde tips), thick dark brows,
+   long face + strong jaw, big light-brown mustache past the mouth corners, big toothy grin, tall + slim, black tee. */
+const JP = {
+  k: '#2b1f1a', d: '#6e5232', h: '#9c7748', H: '#c4a06a', L: '#e2c896',
+  s: '#f0c3a2', S: '#d9a07e', n: '#c98d6c', r: '#e6a487',
+  b: '#4e3523', e: '#2b2a33', w: '#ffffff', i: '#7d99a8',
+  m: '#a57a4b', M: '#7d5634', t: '#ffffff', T: '#e3ddd4', p: '#6b2c2c',
+  c: '#26242c', C: '#3a3743', j: '#3d4a63', J: '#2e384d', o: '#f2efe8', O: '#c9c3b7', a: '#f0c3a2', A: '#d9a07e',
+};
+// head: 20 wide x 23 tall, smiling
+const HEAD = [
+  ".....kkkkkkkkkk.....",
+  "...kkHLHhhhhhHLHkk..",
+  "..kHLHhhhhdhhhhHLHk.",
+  ".kHHhhhhhddhhhhhHHk.",
+  ".kHhhhhhdssdhhhhhHk.",
+  "khhhhhhdssssdhhhhhhk",
+  "khhhhdssssssssdhhhhk",
+  "khhhdssssssssssdhhhk",
+  "khhdsbbbbssbbbbsdhhk",
+  "khhksbbbssssbbbSkhhk",
+  "khksseeeesseeeesSkhk",
+  "ksksssiessseissSSksk",
+  "ksksssssssSssssSSksk",
+  "kskssssssrSssssSSkSk",
+  "..ksrssssnrnsssrSk..",
+  "..kMmmmmmmmmmmmMk...",
+  "..kmMMtttttttMMmSk..",
+  "..ksMMpTTTTTTpMMSk..",
+  "...ksssMrrrrMsSSk...",
+  "...ksssssssssSSk....",
+  "....ksssssssSSk.....",
+  ".....ksssssSSk......",
+  "......kkkkkkk......."
+  ];
+function normRow(r, w) { return (r + '.'.repeat(w)).slice(0, w); }
+const HEADW = 20;
+const HEADG = HEAD.map((r) => normRow(r, HEADW));
+function blit(c, X, Y, rows, flip) {
+  for (let y = 0; y < rows.length; y++) {
+    const row = rows[y];
+    for (let x = 0; x < row.length; x++) {
+      const ch = row[flip ? row.length - 1 - x : x];
+      if (ch === '.') continue;
+      c.fillStyle = JP[ch]; c.fillRect(X + x, Y + y, 1, 1);
+    }
+  }
+}
+/* full figure: 21 wide x 58 tall. dir: 'down' (facing class) or 'left'/'right' (walking). */
+function drawJosh3(c, X, Y, dir, frame) {
+  const P = (col, x, y, w, h) => { c.fillStyle = JP[col] || col; c.fillRect(X + x, Y + y, w, h); };
+  const f = frame ? 1 : 0, walk = dir === 'left' || dir === 'right';
+  const lean = dir === 'right' ? 1 : dir === 'left' ? -1 : 0;
+  const lL = walk ? (f ? -2 : 1) : 0, lR = walk ? (f ? 1 : -2) : 0;
+  // legs (dark jeans) + white sneakers
+  P('k', 5 + lL, 41, 5, 15); P('j', 6 + lL, 41, 3, 14); P('J', 8 + lL, 41, 1, 14);
+  P('k', 11 + lR, 41, 5, 15); P('j', 12 + lR, 41, 3, 14); P('J', 14 + lR, 41, 1, 14);
+  P('k', 4 + lL, 54, 7, 4); P('o', 5 + lL, 55, 5, 2); P('O', 5 + lL, 56, 5, 1);
+  P('k', 10 + lR, 54, 7, 4); P('o', 11 + lR, 55, 5, 2); P('O', 11 + lR, 56, 5, 1);
+  // black tee
+  P('k', 3, 24, 15, 18); P('c', 4, 25, 13, 16); P('C', 5, 26, 2, 13); P('C', 8, 25, 5, 1);
+  // arms
+  const sw = walk ? (f ? 1 : -1) : 0;
+  P('k', 0, 25, 4, 7); P('c', 1, 26, 3, 5); P('k', 17, 25, 4, 7); P('c', 17, 26, 3, 5);
+  P('k', 0 + sw, 31, 4, 11); P('a', 1 + sw, 31, 2, 10); P('A', 2 + sw, 32, 1, 9);
+  P('k', 17 - sw, 31, 4, 11); P('a', 18 - sw, 31, 2, 10); P('A', 18 - sw, 32, 1, 9);
+  // neck
+  P('k', 7, 20, 7, 5); P('n', 8, 20, 5, 4);
+  blit(c, X + lean, Y, HEADG, dir === 'left');
+}
+
+/* Josh v6: friendly pixel style with a little more detail. Curtain hair with a middle part, brows, small mustache, closed smile, slim build. 14 x 24 drawn at 2x. */
+const J4C = { k: '#2b1f1a', h: '#a47c4a', H: '#d2b07a', d: '#7a5a34', s: '#f0c3a2', S: '#dca582', b: '#5a3f26', e: '#2b1f1a', m: '#7a5a34', l: '#b8695c', c: '#2a2830', C: '#45424e', j: '#3d4a63', J: '#2f394d', o: '#f2efe8' };
+const J4_TOP = [
+  '...kkkkkkkk...',
+  '..khhhddhhhk..',
+  '.khhhhhhhhhhk.',
+  '.khhhsssshhhk.',
+  '.khhsssssshhk.',
+  '.khsssssssshk.',
+  '.ksssessesssk.',
+  '.kssssssssssk.',
+  '.kssssssssssk.',
+  '..ksssllsssk..',
+  '..kssssssssk..',
+  '...kssssssk...',
+  '....kkkkkk....',
+  '.....kssk.....',
+  '..kcccccccck..',
+  '..kcccccccck..',
+  '..ksccccccsk..',
+  '..ksccccccsk..',
+  '...kjjjjjjk...',
+];
+const J4_LEGS = [[
+  '...kjjkkjjk...',
+  '...kjjkkjjk...',
+  '...kjjkkjjk...',
+  '..kook..kook..',
+  '..kkkk..kkkk..',
+], [
+  '...kjjkkjjk...',
+  '..kjjk..kjjk..',
+  '..kjjk..kjjk..',
+  '.kook....kook.',
+  '.kkkk....kkkk.',
+]];
+function blit4(c, X, Y, rows, s) {
+  for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
+    const ch = rows[y][x]; if (ch === '.') continue;
+    c.fillStyle = J4C[ch]; c.fillRect(X + x * s, Y + y * s, s, s);
+  }
+}
+/* 28 x 48 on screen. */
+function drawJosh4(c, X, Y, dir, frame) {
+  const walk = dir === 'left' || dir === 'right';
+  blit4(c, X, Y + (walk && frame ? -1 : 0), J4_TOP, 2);
+  blit4(c, X, Y + 38, J4_LEGS[walk && frame ? 1 : 0], 2);
+}
+function drawPortrait(c) {
+  c.fillStyle = '#d6f2ef'; c.fillRect(0, 0, 44, 44);
+  blit4(c, 1, 2, J4_TOP.slice(0, 14), 3);
+}
+
+/* smooth light on top of the pixel art: glows (screen blend) and shade (vignette + soft shadows) */
+const fxGlow = $('#fxGlow').getContext('2d'), fxShade = $('#fxShade').getContext('2d');
+const FXK = 2;
+const LIGHTS = {
+  home: { glow: [[272, 30, 150, '255,226,150', .55], [140, 60, 220, '255,240,200', .18]], vig: .26, vc: '40,30,20' },
+  westmont: { glow: [[232, 100, 180, '255,140,80', .6], [232, 112, 70, '255,225,150', .45]], vig: .4, vc: '45,20,60' },
+  arcade: { glow: [[242, 76, 130, '120,215,255', .5], [72, 60, 50, '255,240,200', .25]], vig: .62, vc: '8,5,28' },
+  grad: { glow: [[100, 125, 95, '255,240,190', .4], [228, 125, 95, '255,240,190', .32], [160, 80, 120, '255,210,120', .12]], vig: .5, vc: '20,8,30' },
+  tyler: { glow: [[300, 40, 210, '255,255,235', .5], [70, 85, 80, '255,255,255', .15]], vig: .24, vc: '30,40,55' },
+  politheon: { glow: [[229, 110, 110, '60,224,208', .55], [40, 30, 50, '255,240,200', .3], [160, 128, 180, '255,200,120', .1]], vig: .5, vc: '6,4,22' },
+  lab: { glow: [[242, 106, 120, '59,224,208', .5], [25, 110, 40, '59,224,160', .35], [57, 110, 40, '255,111,145', .3]], vig: .55, vc: '0,12,18' },
+};
+function renderFx(t, id, ground, jx, fade) {
+  const W = SW * FXK, H = SH * FXK, L = LIGHTS[id];
+  fxGlow.clearRect(0, 0, W, H); fxShade.clearRect(0, 0, W, H);
+  const pulse = 1 + Math.sin(t / 900) * .06;
+  fxGlow.globalAlpha = fade;
+  for (const [x, y, r, col, a] of L.glow) {
+    const g = fxGlow.createRadialGradient(x * FXK, y * FXK, 0, x * FXK, y * FXK, r * FXK * pulse);
+    g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+    fxGlow.fillStyle = g; fxGlow.fillRect(0, 0, W, H);
+  }
+  fxGlow.globalAlpha = 1;
+  const v = fxShade.createRadialGradient(W / 2, H * .45, H * .35, W / 2, H * .5, W * .62);
+  v.addColorStop(0, `rgba(${L.vc},0)`); v.addColorStop(1, `rgba(${L.vc},${L.vig})`);
+  fxShade.fillStyle = v; fxShade.fillRect(0, 0, W, H);
+  if (jx != null) {
+    fxShade.save(); fxShade.translate(jx * FXK, ground * FXK); fxShade.scale(1, .28);
+    const sh = fxShade.createRadialGradient(0, 0, 0, 0, 0, 16 * FXK); sh.addColorStop(0, 'rgba(10,6,20,.45)'); sh.addColorStop(1, 'rgba(10,6,20,0)');
+    fxShade.fillStyle = sh; fxShade.fillRect(-20 * FXK, -20 * FXK, 40 * FXK, 40 * FXK); fxShade.restore();
+  }
+}
+const faceCanvas = $('#dlgFace');
+(() => { const c = faceCanvas.getContext('2d'); c.imageSmoothingEnabled = false; drawPortrait(c); })();
+
+/* ============ the story: 7 levels, always in this order ============ */
+const STOPS = [
+  { id: 'home', short: 'Orange County', name: 'ORANGE COUNTY', tag: 'HOME', pages: [
+    { t: "Hi! I'm Josh. Welcome to my Code Quest! We'll follow my path in order, level by level, starting where I grew up." },
+    { t: "Level 1: Orange County, California! Sunshine, palm trees, and lots of orange trees." },
+    { q: "Which famous theme park is in Orange County, where I grew up?", opts: ['Disneyland', 'SeaWorld', 'Legoland'], a: 0,
+      yes: "Disneyland! It's in Anaheim, right in Orange County." },
+    { t: "Each building is a level. Answer a question right on the first try and the class earns a star. Ready? Next stop: the beach!" },
+  ] },
+  { id: 'westmont', short: 'Beach + college', name: 'THE BEACH LEVEL', tag: 'WESTMONT', pages: [
+    { t: "Level 2: The beach level! I went to college at Westmont, in Santa Barbara, just a few minutes from the ocean." },
+    { t: "My freshman year, I took my very first coding class. That's where my coding quest really started!" },
+    { q: "So what do you think CODE is?", opts: ['A secret password', 'Instructions for a computer', 'A language only robots speak'], a: 1,
+      yes: "Yes! Code is a list of instructions. Computers are super fast, but they only do EXACTLY what you tell them." },
+    { q: "How many math problems do you think a regular laptop can do in ONE second?", opts: ['10', '1,000', 'Over a billion'], a: 2,
+      yes: "Over a billion! Super fast... but only if the instructions are right.",
+      stat: { value: 1000000000, suffix: '+', label: 'math problems a laptop can do every second', compare: 'If you did one problem every second, a billion would take you over 30 years!' } },
+    { t: "Code is like a recipe. Step 1: crack the egg. Step 2: stir. Mix up the steps and you don't get a cake!" },
+    { t: "Let's try it, just like my first class. Can you give my robot the right instructions to reach the gem?", actions: [{ label: 'Start the Code Challenge', primary: true, run: () => openChallenge(0) }, { label: 'Skip for now', run: () => closeDialog() }] },
+  ], after: [
+    { t: "You just wrote a program! A PROGRAM is a list of instructions that a computer follows in order." },
+    { t: "When the robot bumps into a rock, that mistake is called a BUG. Fixing it is called DEBUGGING. Coders debug all day long!" },
+  ] },
+  { id: 'arcade', short: 'First app', name: 'MY FIRST APP', tag: 'FIRST APP', pages: [
+    { t: "Level 3: My first app! I was 19 years old and still in college." },
+    { q: "What do you think was the very first app I ever built?", opts: ['A calculator', 'My own version of Angry Birds', 'A homework helper'], a: 1,
+      yes: "My own version of Angry Birds! To make things fly the right way, I had to use math: speed, angles, and gravity." },
+    { t: "Want to see how that works? Aim the launcher and knock down the tower. Class, you pick the angle and the power!", actions: [{ label: 'Play the Launch Game', primary: true, run: () => openLaunch() }, { label: 'Skip for now', run: () => closeDialog() }] },
+  ], after: [
+    { t: "That's math hiding inside code! Every split second, the computer moves the ball forward, up, and pulls it down a little more. That's gravity." },
+    { t: "Game makers use math like this all the time. If you like math, you'll probably like coding too!" },
+  ] },
+  { id: 'grad', short: 'Graduation', name: 'GRADUATION', tag: 'GRADUATION', pages: [
+    { t: "Level 4: Graduation! I got my degree in Computer Science AND Mathematics. Two subjects at once!" },
+    { t: "Some classes were really hard! When I got stuck, I broke the problem into small steps and kept trying. That's what coders do." },
+    { q: "Math and coding are best friends. Which of these uses math and code to work?", opts: ['Video games', 'Weather forecasts', 'Music apps', 'All of them!'], a: 3,
+      yes: "All of them! Games, weather, music, even this game. Behind every app is code, and behind lots of code is math." },
+  ] },
+  { id: 'tyler', short: 'First job', name: 'FIRST BIG JOB', tag: 'TYLER TECH', pages: [
+    { t: "Level 5: My first big job! I worked at Tyler Technologies, a company that makes software for cities, courts, and schools." },
+    { q: "How many places do you think use Tyler's software?", opts: ['15', '1,500', '15,000'], a: 2,
+      yes: "About 15,000 places! From tiny towns to giant cities.",
+      stat: { value: 15000, label: 'places use Tyler software', compare: 'Cities, courts, schools, and more, all running on code.' } },
+    { t: "At Tyler I was a leader. I decided WHAT our apps should do, and I led teams of software engineers who built them." },
+    { q: "Math time! I led 2 teams, with 4 software engineers on each team. How many engineers is that?", opts: ['6', '8', '24'], a: 1,
+      yes: "8 engineers! 2 teams × 4 engineers = 8. Math comes in handy at work too." },
+    { t: "While I was working, I went back to school, too. I'm getting a master's degree from Georgia Tech, online. Grown-ups keep learning!" },
+  ] },
+  { id: 'politheon', short: 'Politheon', name: 'MY JOB TODAY', tag: 'POLITHEON', pages: [
+    { t: "Level 6: Where I work now! Politheon is a startup, a brand-new company building something that doesn't exist yet." },
+    { t: "I'm the COO, the Chief Operating Officer. My job is to help everyone on the team work together, kind of like the coach of a sports team." },
+    { q: "Guess how many lines of code I've written so far!", opts: ['100', '10,000', 'Over 1,000,000'], a: 2,
+      yes: "Over one MILLION lines of code!",
+      stat: { value: 1000000, suffix: '+', label: "lines of code I've written", compare: 'Reading one line every second, without ever sleeping, would take you more than 11 days!' } },
+    { q: "A company is worth what people would pay to own it. How much do you think Politheon is worth?", opts: ['$1,000', '$100,000', '$10 million'], a: 2,
+      yes: "$10 million! All from an idea, a team, and a whole lot of code.",
+      stat: { value: 10000000, prefix: '$', label: 'what Politheon is worth', compare: 'In $100 bills, that stack would be taller than a 3-story building!' } },
+    { t: "We build tools that use AI, or artificial intelligence. Our tools help people check AI's work, a bit like a teacher checking homework." },
+  ] },
+  { id: 'lab', short: 'Robot Lab', name: 'THE ROBOT LAB', tag: 'ROBOT LAB', pages: [
+    { t: "Final level: the Robot Lab! Remember what code is? A list of steps, followed exactly. I used that idea to build a robot that plays Wordle." },
+    { q: "How many words do you think my robot knows?", opts: ['50', '500', fmt(ANSWERS.length)], a: 2,
+      yes: `${fmt(ANSWERS.length)} words! After every guess, it checks every single one.` },
+    { t: () => `Quest complete! The class earned ${stars.size} out of ${QUIZ_TOTAL} stars. Now YOU play Wordle as a class, then my robot tries the same word. Who needs fewer guesses?`,
+      actions: [{ label: 'Enter the Robot Lab', primary: true, run: () => { closeDialog(); showLab(); } }] },
+  ] },
+];
+STOPS.forEach((s, i) => {
+  s.i = i; s.scene = SCENES[s.id];
+  s.pages.forEach((p, j) => { if (p.q) p.id = s.id + '-' + j; });
+});
+const QUIZ_TOTAL = STOPS.reduce((n, s) => n + s.pages.filter((p) => p.q).length, 0);
+
+/* progress (kept in this browser so a reload mid-talk doesn't lose your place) */
+const saved = store.get('cq4-progress') || {};
+let visited = new Set(saved.visited || []);
+let stars = new Set(saved.stars || []);
+(saved.answered || []).forEach((q) => answeredQ.add(q));
+function save() { store.set('cq4-progress', { visited: [...visited], stars: [...stars], answered: [...answeredQ] }); }
+function nextStop() { return STOPS.find((s) => !visited.has(s.id)) || null; }
+function isOpen(s) { return visited.has(s.id) || s === nextStop(); }
+
+/* HUD: the level path */
+const levelsEl = $('#levels');
+levelsEl.innerHTML = STOPS.map((s, i) => `<li><button type="button" class="lvl" data-i="${i}"><span class="num">${i + 1}</span><span class="lvl-name">${s.short}</span></button></li>`).join('');
+function refreshHud() {
+  const nx = nextStop();
+  $$('.lvl').forEach((el) => {
+    const s = STOPS[+el.dataset.i]; const open = isOpen(s);
+    el.classList.toggle('done', visited.has(s.id)); el.classList.toggle('next', s === nx); el.classList.toggle('locked', !open);
+    el.classList.toggle('here', s.i === cur);
+    el.disabled = !open;
+    el.querySelector('.lvl-name').textContent = open ? s.short : '???';
+  });
+  $('#stars').innerHTML = `<span class="star">&#9733;</span> ${stars.size} / ${QUIZ_TOTAL}`;
+  $('#nextBtn').innerHTML = nx ? 'Next level &#9654;' : 'Robot Lab &#9654;';
+  const any = visited.size > 0;
+  $('#startBtn').innerHTML = !any ? 'Start the adventure &#9654;' : nx ? 'Continue the adventure &#9654;' : 'Back to the adventure &#9654;';
+  $('#resetBtn').hidden = !any;
+  const plate = $('#plate');
+  if (cur >= 0) { plate.hidden = false; plate.innerHTML = `<b>${cur === STOPS.length - 1 ? 'FINAL LEVEL' : 'LEVEL ' + (cur + 1)}</b> ${STOPS[cur].name}`; } else plate.hidden = true;
+}
+
+/* ============ Josh walks between scenes ============ */
+let cur = -1;
+const J = { x: -30, dir: 'right', walking: false, target: 0, cb: null, frame: 0 };
+let trans = null, busy = false;
+function walkTo(x, cb) { J.target = x; J.walking = true; J.dir = x > J.x ? 'right' : 'left'; J.cb = cb || null; }
+function stepJosh(dt) {
+  if (!J.walking) return;
+  const d = Math.sign(J.target - J.x); J.x += d * 84 * dt;
+  J.frame = Math.floor(performance.now() / 130) % 2;
+  if ((d > 0 && J.x >= J.target) || (d < 0 && J.x <= J.target) || d === 0) { J.x = J.target; J.walking = false; const cb = J.cb; J.cb = null; if (cb) cb(); }
+}
+function wipe(dir, ms, then) { trans = { p: dir > 0 ? 0 : 1, dir, t0: performance.now(), ms, then }; }
+function stepWipe(now) {
+  if (!trans) return;
+  const k = Math.min(1, (now - trans.t0) / (reduceMotion ? 1 : trans.ms));
+  trans.p = trans.dir > 0 ? k : 1 - k;
+  if (k >= 1) { const th = trans.then; if (trans.dir < 0) trans = null; else trans.p = 1; if (th) th(); }
+}
+function goTo(s) {
+  if (busy) return;
+  if (!isOpen(s)) { toast(`Finish level ${nextStop().i + 1} first!`); return; }
+  if (dlg.open) closeDialog(true);
+  hideStat();
+  if (s.i === cur) { J.dir = 'down'; arriveAt(s); return; }
+  busy = true;
+  const forward = s.i > cur;
+  const travel = () => wipe(1, 520, () => {
+    cur = s.i; J.x = forward ? -24 : SW + 24; J.walking = false; refreshHud();
+    const first = !visited.has(s.id);
+    if (first) { visited.add(s.id); save(); refreshHud(); }
+    const open = () => wipe(-1, 520, () => walkTo(s.scene.standX, () => { J.dir = 'down'; busy = false; arriveAt(s); }));
+    if (first) banner(s, open); else setTimeout(open, 250);
+  });
+  if (cur < 0) travel();
+  else walkTo(forward ? SW + 30 : -30, travel);
+}
+function goNext() { const s = nextStop(); if (!s) { if (cur === STOPS.length - 1) showLab(); else goTo(STOPS[STOPS.length - 1]); return; } if (cur >= 0 && !visited.has(STOPS[cur].id)) return; goTo(s); }
+function goPrev() { if (cur > 0) goTo(STOPS[cur - 1]); }
+function arriveAt(s) { say(s.pages); }
+
+/* ============ dialog, questions, number reveals ============ */
+const dlg = { open: false, pages: [], i: 0, typed: 0, timer: 0, done: null, text: '', answered: false, wrong: 0, statShown: false };
+const dlgEl = $('#dialog'), dlgText = $('#dlgText'), dlgActions = $('#dlgActions'), dlgMore = $('#dlgMore'), dlgQuiz = $('#dlgQuiz');
+function say(pages, done) { dlg.open = true; dlg.pages = pages; dlg.i = 0; dlg.done = done || null; dlgEl.hidden = false; placeDialog(); showPage(); }
+function typeText(str, then) {
+  clearInterval(dlg.timer); dlg.text = str; dlg.typed = 0; dlg.then = then;
+  if (reduceMotion) { dlg.typed = str.length; dlgText.textContent = str; then(); return; }
+  dlgText.textContent = '';
+  dlg.timer = setInterval(() => { dlg.typed += 2; dlgText.textContent = str.slice(0, dlg.typed); if (dlg.typed >= str.length) { clearInterval(dlg.timer); then(); } }, 26);
+}
+function finishTyping() { clearInterval(dlg.timer); dlg.typed = dlg.text.length; dlgText.textContent = dlg.text; const t = dlg.then; dlg.then = null; if (t) t(); }
+function showPage() {
+  const p = dlg.pages[dlg.i];
+  dlgActions.innerHTML = ''; dlgQuiz.innerHTML = ''; dlgQuiz.hidden = true; dlgMore.hidden = true;
+  dlg.answered = false; dlg.wrong = 0; dlg.statShown = false;
+  $('#dlgName').textContent = p.q ? 'Josh asks' : 'Josh';
+  typeText(p.q || (typeof p.t === 'function' ? p.t() : p.t), () => pageReady(p));
+}
+function pageReady(p) {
+  dlg.then = null;
+  if (p.q && !dlg.answered) {
+    dlgQuiz.hidden = false;
+    dlgQuiz.innerHTML = p.opts.map((o, k) => `<button type="button" class="opt" data-k="${k}"><span class="k">${'ABCD'[k]}</span><span>${o}</span></button>`).join('');
+    dlgMore.hidden = false; dlgMore.innerHTML = 'Class, vote! Then pick one';
+    return;
+  }
+  if (p.actions) {
+    for (const a of p.actions) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn' + (a.primary ? ' btn-sun' : ''); b.textContent = a.label; b.addEventListener('click', (e) => { e.stopPropagation(); a.run(); }); dlgActions.appendChild(b); }
+    return;
+  }
+  const last = dlg.i >= dlg.pages.length - 1 && !(p.stat && !dlg.statShown);
+  dlgMore.hidden = false;
+  dlgMore.innerHTML = (p.stat && !dlg.statShown ? 'Reveal the number' : last ? 'Done' : 'Click or Space') + ' <i></i>';
+}
+dlgQuiz.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('.opt'); if (b) answer(+b.dataset.k); });
+function answer(k) {
+  const p = dlg.pages[dlg.i]; if (!p.q || dlg.answered || dlg.typed < dlg.text.length) return;
+  const btn = dlgQuiz.querySelector(`[data-k="${k}"]`); if (!btn || btn.disabled) return;
+  if (k !== p.a) {
+    dlg.wrong++; btn.classList.add('wrong'); btn.disabled = true;
+    btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+    dlgMore.hidden = false; dlgMore.textContent = 'Not quite! Try again.';
+    return;
+  }
+  dlg.answered = true; answeredQ.add(p.id);
+  btn.classList.add('right'); dlgQuiz.querySelectorAll('.opt').forEach((o) => { o.disabled = true; });
+  if (dlg.wrong === 0 && !stars.has(p.id)) { stars.add(p.id); refreshHud(); popStar(); }
+  save();
+  confetti(dlg.wrong === 0 ? 60 : 30); dlgMore.hidden = true;
+  setTimeout(() => { $('#dlgName').textContent = dlg.wrong === 0 ? 'Correct! +1 star' : 'You got it!'; typeText(p.yes, () => pageReady(p)); }, reduceMotion ? 0 : 650);
+}
+function advance() {
+  if (!dlg.open) return;
+  const p = dlg.pages[dlg.i];
+  if (dlg.typed < dlg.text.length) { finishTyping(); return; }
+  if (p.q && !dlg.answered) return;
+  if (p.actions) { const a = p.actions.find((x) => x.primary) || p.actions[0]; a.run(); return; }
+  if (p.stat && !dlg.statShown) { dlg.statShown = true; showStat(p.stat); return; }
+  if (dlg.i < dlg.pages.length - 1) { dlg.i++; showPage(); } else closeDialog();
+}
+function closeDialog(silent) { clearInterval(dlg.timer); dlg.open = false; dlgEl.hidden = true; const d = dlg.done; dlg.done = null; if (d && !silent) d(); }
+dlgEl.addEventListener('click', advance);
+
+/* big number card */
+let statOpen = false, statRaf = 0;
+function fmtStat(st, v) { return (st.prefix || '') + fmt(Math.round(v)) + (st.suffix || ''); }
+function showStat(st) {
+  statOpen = true; dlgEl.hidden = true;
+  const box = $('#statcard'); box.hidden = false;
+  $('#statLabel').textContent = st.label; $('#statCompare').textContent = st.compare || '';
+  const num = $('#statNum'); const t0 = performance.now(); const dur = reduceMotion ? 1 : 1900;
+  cancelAnimationFrame(statRaf); box.classList.remove('landed');
+  const tick = (now) => { const k = Math.min(1, (now - t0) / dur); const e = k === 1 ? 1 : 1 - Math.pow(2, -10 * k); num.textContent = fmtStat(st, st.value * e); if (k < 1) statRaf = requestAnimationFrame(tick); else { box.classList.add('landed'); confetti(90); } };
+  statRaf = requestAnimationFrame(tick);
+  setTimeout(() => $('#statGo').focus({ preventScroll: true }), 50);
+}
+function hideStat() { if (!statOpen) return; statOpen = false; $('#statcard').hidden = true; cancelAnimationFrame(statRaf); }
+function closeStat() { if (!statOpen) return; hideStat(); dlgEl.hidden = false; advance(); }
+$('#statGo').addEventListener('click', closeStat);
+
+/* level title card (shown while the screen is wiped closed) */
+let bannerOn = false;
+function banner(s, then) {
+  bannerOn = true;
+  const el = $('#banner'); $('#bnLevel').textContent = s.i === STOPS.length - 1 ? 'FINAL LEVEL' : `LEVEL ${s.i + 1}`; $('#bnName').textContent = s.name;
+  el.hidden = false; el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  setTimeout(() => { el.hidden = true; bannerOn = false; then(); }, reduceMotion ? 900 : 1800);
+}
+let toastT = 0;
+function toast(msg) { const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 1800); }
+function popStar() { const el = $('#stars'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+
+/* ============ input ============ */
+function questActive() { return !$('#quest').hidden && $('#titleCard').hidden; }
+document.addEventListener('keydown', (e) => {
+  if (challengeOpen) { challengeKey(e); return; }
+  if (launchOpen) { launchKey(e); return; }
+  if ($('#quest').hidden) return;
+  if (e.target.closest && e.target.closest('input')) return;
+  if (!$('#titleCard').hidden) { if (e.key === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); startQuest(); } return; }
+  if (bannerOn || busy) { if (e.key === ' ') e.preventDefault(); return; }
+  if (statOpen) { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); closeStat(); } return; }
+  if (dlg.open) {
+    const p = dlg.pages[dlg.i];
+    const k = { 1: 0, 2: 1, 3: 2, 4: 3, a: 0, b: 1, c: 2, d: 3 }[e.key.toLowerCase()];
+    if (p.q && !dlg.answered && k !== undefined && k < p.opts.length) { e.preventDefault(); answer(k); return; }
+    if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') {
+      if (document.activeElement && document.activeElement.closest('.dlg-actions, .dlg-quiz')) return;
+      e.preventDefault(); advance();
+    }
+    return;
+  }
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') {
+    if (document.activeElement && document.activeElement.tagName === 'BUTTON' && e.key !== 'ArrowRight') return;
+    e.preventDefault(); goNext();
+  } else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+});
+canvas.addEventListener('click', () => { if (questActive() && !dlg.open && !statOpen && !busy && !bannerOn && cur >= 0) say(STOPS[cur].pages); });
+levelsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.lvl'); if (!btn || btn.disabled) return;
+  if (!$('#titleCard').hidden) hideTitle();
+  goTo(STOPS[+btn.dataset.i]);
+});
+$('#nextBtn').addEventListener('click', () => { if (!$('#titleCard').hidden) { startQuest(); return; } if (busy || bannerOn) return; if (dlg.open) closeDialog(true); hideStat(); goNext(); });
+$('#fsBtn').addEventListener('click', async () => {
+  try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { $('#fsBtn').textContent = 'Use F11'; }
+});
+// after a mouse click on a HUD or title button, give Space back to the story
+document.addEventListener('click', (e) => { const b = e.target.closest('.hud button, .title-card button'); if (b && e.detail > 0) b.blur(); });
+
+/* ============ title + scenes ============ */
+function hideTitle() { $('#titleCard').hidden = true; }
+function startQuest() {
+  hideTitle();
+  if (!visited.size) { goTo(STOPS[0]); return; }
+  const last = STOPS.filter((s) => visited.has(s.id)).pop();
+  cur = last.i; J.x = last.scene.standX; J.dir = 'down'; refreshHud();
+  const nx = nextStop();
+  toast(nx ? `Welcome back! Next up: Level ${nx.i + 1}` : 'Welcome back!');
+}
+$('#startBtn').addEventListener('click', startQuest);
+$('#resetBtn').addEventListener('click', () => {
+  visited = new Set(); stars = new Set(); answeredQ.clear(); save(); cur = -1; refreshHud();
+  toast('Progress cleared. Ready for a fresh start!');
+});
+$('#titleLab').addEventListener('click', () => showLab());
+$('#toLab').addEventListener('click', () => showLab());
+$('#backMap').addEventListener('click', () => showQuest());
+function showLab() { if (dlg.open) closeDialog(true); $('#quest').hidden = true; $('#lab').hidden = false; $('#lab').scrollTop = 0; requestAnimationFrame(() => { drawDots(true); }); labLoopStart(); }
+function showQuest() { $('#lab').hidden = true; $('#quest').hidden = false; fitBoard(); }
+
+/* ============ layout + render loop ============ */
+function placeDialog() {
+  const st = $('#stage'), board = $('#board');
+  const free = st.clientHeight - board.offsetHeight;
+  if (free > 260) { dlgEl.style.top = 'auto'; dlgEl.style.bottom = '12px'; }
+  else { dlgEl.style.top = (board.offsetTop + 12) + 'px'; dlgEl.style.bottom = 'auto'; }
+}
+function fitBoard() {
+  const st = $('#stage'); const cs = getComputedStyle(st);
+  const w = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const h = st.clientHeight - parseFloat(cs.paddingBottom) - 8;
+  let bw = Math.min(w, h * 16 / 9); bw = Math.max(200, Math.floor(bw));
+  $('#board').style.width = bw + 'px';
+  placeDialog();
+}
+window.addEventListener('resize', () => { if (!$('#quest').hidden) fitBoard(); else drawDots(true); });
+
+let wasReady = false;
+function render(t) {
+  let ready = false;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+  const scene = cur >= 0 ? STOPS[cur].scene : SCENES.home;
+  scene.draw(ctx, t);
+  if (cur >= 0) {
+    const gy = scene.ground, x = Math.round(J.x) - 14, hy = gy - 48;
+    drawJosh4(ctx, x, hy, J.dir, J.walking ? J.frame : 0);
+    if (STOPS[cur].id === 'grad') { R(ctx, INK, x + 1, hy - 3, 26, 4); R(ctx, '#221a38', x + 2, hy - 2, 24, 2); R(ctx, '#ffd23f', x + 25, hy - 2, 1, 7); R(ctx, '#ffd23f', x + 24, hy + 4, 3, 2); }
+    // a nudge toward the next level when nothing else is happening
+    if (!dlg.open && !statOpen && !busy && !J.walking && cur < STOPS.length - 1 && visited.has(STOPS[cur].id)) {
+      const bob = reduceMotion ? 0 : Math.round(Math.sin(t / 180) * 2);
+      const ax = 296 + bob, ay = gy - 22;
+      R(ctx, INK, ax - 1, ay - 1, 10, 9); R(ctx, '#ff7a3d', ax, ay, 4, 7); R(ctx, '#ff7a3d', ax + 4, ay + 1, 2, 5); R(ctx, '#ff7a3d', ax + 6, ay + 2, 2, 3);
+      ready = true;
+    }
+  }
+  const sid = cur >= 0 ? STOPS[cur].id : 'home';
+  renderFx(t, sid, scene.ground, cur >= 0 ? J.x : null, trans ? 1 - trans.p : 1);
+  if (ready !== wasReady) { $('#nextBtn').classList.toggle('ready', ready); wasReady = ready; }
+  if (trans) {
+    ctx.fillStyle = '#1a1530';
+    const B = 20, cols = SW / B, rows = Math.ceil(SH / B);
+    for (let by = 0; by < rows; by++) for (let bx = 0; bx < cols; bx++) {
+      const th = (bx / cols) * .7 + (by / rows) * .25;
+      const k = Math.max(0, Math.min(1, (trans.p * 1.05 - th) / .1));
+      if (k > 0) { const sz = Math.ceil(B * k); ctx.fillRect(bx * B + (B - sz) / 2, by * B + (B - sz) / 2, sz, sz); }
+    }
+  }
+}
+let lastT = 0;
+function loop(now) {
+  const dt = Math.min(.05, (now - (lastT || now)) / 1000); lastT = now;
+  if (!$('#quest').hidden) { stepJosh(dt); stepWipe(now); render(now); }
+  requestAnimationFrame(loop);
+}
+
+/* ============ code challenge ============ */
+const LEVELS = [
+  { cols: 5, rows: 4, start: [0, 3], gem: [3, 0], rocks: [[0, 1], [2, 2], [4, 3]], goal: "Write a program that gets the robot to the gem. Don't bump into the rocks!" },
+  { cols: 5, rows: 4, start: [0, 0], gem: [4, 3], rocks: [[1, 0], [1, 1], [3, 1], [2, 3], [4, 1]], goal: "A longer path! Count the squares with your finger, then tap one arrow for each step." },
+];
+let challengeOpen = false, ch = null;
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const chGrid = $('#chGrid'), chProg = $('#chProg'), chMsg = $('#chMsg');
+function openChallenge(n) {
+  if (dlg.open) { clearInterval(dlg.timer); dlg.open = false; dlgEl.hidden = true; dlg.done = null; }
+  challengeOpen = true; $('#challenge').hidden = false;
+  const L = LEVELS[n];
+  ch = { n, L, prog: [], bot: [...L.start], running: false, won: false };
+  $('#chTitle').textContent = `Code Challenge ${n + 1}`;
+  $('#chGoal').textContent = L.goal;
+  chGrid.style.gridTemplateColumns = `repeat(${L.cols}, 1fr)`;
+  let html = '';
+  for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) {
+    const rock = L.rocks.some(([rx, ry]) => rx === x && ry === y), gem = L.gem[0] === x && L.gem[1] === y;
+    html += `<div class="ch-cell">${rock ? `<img src="${rockImg}" alt="rock">` : gem ? `<img src="${gemImg}" alt="gem">` : ''}</div>`;
+  }
+  html += `<div class="ch-bot" id="chBot"><img src="${robotImg}" alt="robot"></div>`;
+  chGrid.innerHTML = html;
+  const bot = $('#chBot'); bot.style.width = (100 / L.cols) + '%'; bot.style.height = (100 / L.rows) + '%';
+  placeBot(true);
+  $('#chNext').hidden = true;
+  chMsg.className = 'ch-msg'; chMsg.textContent = 'Tap an arrow for each step the robot should take. Then press Run!';
+  renderProg();
+  setTimeout(() => $('#chRun').focus({ preventScroll: true }), 30);
+}
+function placeBot(instant) {
+  const bot = $('#chBot'); if (!bot) return;
+  if (instant) bot.style.transition = 'none';
+  bot.style.left = (ch.bot[0] / ch.L.cols * 100) + '%'; bot.style.top = (ch.bot[1] / ch.L.rows * 100) + '%';
+  if (instant) { void bot.offsetWidth; bot.style.transition = ''; }
+}
+const ARROW = { up: '&uarr;', down: '&darr;', left: '&larr;', right: '&rarr;' };
+const WORD = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
+function renderProg(active, bad) {
+  if (!ch.prog.length) { chProg.innerHTML = '<span class="empty">Empty. Add some instructions!</span>'; return; }
+  chProg.innerHTML = ch.prog.map((s, i) => `<li class="d-${s.d}${i === active ? ' now' : ''}${i === bad ? ' bad' : ''}"><span class="ar">${ARROW[s.d]}</span>${WORD[s.d]}</li>`).join('');
+}
+function addCmd(d) { if (ch.running || ch.won) return; ch.prog.push({ d, n: 1 }); renderProg(); }
+function undo() { if (ch.running || ch.won) return; ch.prog.pop(); renderProg(); }
+function clearProg() { if (ch.running) return; ch.prog = []; ch.won = false; ch.bot = [...ch.L.start]; placeBot(true); renderProg(); chMsg.className = 'ch-msg'; chMsg.textContent = 'Program cleared. Try again!'; }
+async function runProg() {
+  if (ch.running) return;
+  if (!ch.prog.length) { chMsg.className = 'ch-msg'; chMsg.textContent = "The robot needs instructions first! It can't guess what you want."; return; }
+  ch.running = true; ch.won = false; ch.bot = [...ch.L.start]; placeBot(true);
+  chMsg.className = 'ch-msg'; chMsg.textContent = 'Running your program...';
+  await wait(250);
+  let steps = 0;
+  for (let i = 0; i < ch.prog.length; i++) {
+    const s = ch.prog[i];
+    for (let r = 0; r < s.n; r++) {
+      renderProg(i); steps++;
+      const [dx, dy] = DIRS[s.d]; const nx = ch.bot[0] + dx, ny = ch.bot[1] + dy;
+      const off = nx < 0 || ny < 0 || nx >= ch.L.cols || ny >= ch.L.rows;
+      const rock = ch.L.rocks.some(([x, y]) => x === nx && y === ny);
+      if (off || rock) {
+        const bot = $('#chBot'); bot.classList.remove('bonk'); void bot.offsetWidth; bot.classList.add('bonk');
+        renderProg(-1, i);
+        chMsg.className = 'ch-msg bug';
+        chMsg.textContent = `Bonk! Step ${i + 1} (${WORD[s.d]}) ${off ? 'walks off the edge' : 'runs into a rock'}. That's a bug! Change your program and run it again.`;
+        ch.running = false; return;
+      }
+      ch.bot = [nx, ny]; placeBot(); await wait(320);
+    }
+  }
+  renderProg();
+  ch.running = false;
+  if (ch.bot[0] === ch.L.gem[0] && ch.bot[1] === ch.L.gem[1]) {
+    ch.won = true;
+    const blocks = ch.prog.length;
+    chMsg.className = 'ch-msg win';
+    chMsg.textContent = ch.n === 0
+      ? `You did it! Your program has ${blocks} steps, and the robot followed every one, in order.`
+      : `Amazing! ${blocks} steps, all in the right order. That's a real program!`;
+    $('#chNext').hidden = ch.n >= LEVELS.length - 1;
+    confetti(40);
+  } else {
+    chMsg.className = 'ch-msg bug';
+    chMsg.textContent = "The program finished, but the robot isn't on the gem yet. Add more steps!";
+  }
+}
+function closeChallenge() {
+  const won = ch && (ch.won || ch.n > 0);
+  challengeOpen = false; $('#challenge').hidden = true;
+  if (won) say(STOPS[1].after);
+}
+function challengeKey(e) {
+  const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+  if (map[e.key]) { e.preventDefault(); addCmd(map[e.key]); }
+  else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON' && document.activeElement.id !== 'chRun')) { e.preventDefault(); runProg(); }
+  else if (e.key === 'Backspace') { e.preventDefault(); undo(); }
+  else if (e.key === 'Escape') { closeChallenge(); }
+}
+$$('.ch-cmds [data-cmd]').forEach((b) => b.addEventListener('click', () => addCmd(b.dataset.cmd)));
+$('#chUndo').addEventListener('click', undo);
+$('#chClear').addEventListener('click', clearProg);
+$('#chRun').addEventListener('click', runProg);
+$('#chNext').addEventListener('click', () => openChallenge(ch.n + 1));
+$('#chClose').addEventListener('click', closeChallenge);
+
+/* ============ launch game (my first app) ============ */
+let launchOpen = false;
+const lnC = $('#lnCanvas'); const lx = lnC.getContext('2d');
+const LW = 640, LH = 340, GY = 300, G = 0.22, BR = 6, LX0 = 56, LY0 = GY - 16, CR = 26;
+const ln = { tries: 0, ball: null, trail: [], crates: [], star: null, towerX: 500, flying: false, won: false, raf: 0, frame: 0 };
+function lnMsg(t, cls) { const el = $('#lnMsg'); el.className = 'ch-msg' + (cls ? ' ' + cls : ''); el.textContent = t; }
+function lnReset(move) {
+  if (move) ln.towerX = 400 + Math.floor(Math.random() * 7) * 25;
+  ln.crates = [0, 1, 2].map((i) => ({ x: ln.towerX, y: GY - CR * (i + 1), vx: 0, vy: 0, rot: 0, vr: 0, hit: false }));
+  ln.star = { x: ln.towerX + CR / 2, y: GY - CR * 3 - 12, vy: 0, hit: false };
+  ln.ball = null; ln.trail = []; ln.flying = false; ln.won = false;
+}
+function openLaunch() {
+  if (dlg.open) { clearInterval(dlg.timer); dlg.open = false; dlgEl.hidden = true; dlg.done = null; }
+  launchOpen = true; $('#launch').hidden = false; ln.tries = 0; ln.everWon = false;
+  lnReset(false); $('#lnTries').textContent = '';
+  lnMsg('Class, what angle and power should we try? Then press Launch.');
+  cancelAnimationFrame(ln.raf); ln.raf = requestAnimationFrame(lnLoop);
+  setTimeout(() => $('#lnGo').focus({ preventScroll: true }), 30);
+}
+function closeLaunch() {
+  launchOpen = false; $('#launch').hidden = true; cancelAnimationFrame(ln.raf);
+  if (ln.everWon) say(STOPS[2].after);
+}
+function lnLaunch() {
+  if (ln.flying) return;
+  if (ln.won) lnReset(false);
+  const a = +$('#lAngle').value * Math.PI / 180, v = +$('#lPower').value * 0.135;
+  ln.ball = { x: LX0 + Math.cos(a) * 26, y: LY0 - Math.sin(a) * 26, vx: Math.cos(a) * v, vy: -Math.sin(a) * v };
+  ln.trail = []; ln.flying = true; ln.tries++;
+  $('#lnTries').textContent = `Tries: ${ln.tries}`;
+  lnMsg('Whoosh...');
+}
+function hitTower() {
+  if (ln.won) return;
+  ln.won = true; ln.everWon = true;
+  for (const c of ln.crates) { c.hit = true; c.vx = ln.ball.vx * 0.45 + (Math.random() - .3) * 2.5; c.vy = -2 - Math.random() * 3; c.vr = (Math.random() - .5) * .3; }
+  ln.star.hit = true; ln.star.vy = -1.4;
+  ln.ball.vx *= -0.25; ln.ball.vy *= 0.4;
+  confetti(80);
+  lnMsg(`Knocked it down in ${ln.tries} ${ln.tries === 1 ? 'try' : 'tries'}! The code moves the ball a tiny bit every frame and pulls it down a little more each time. That's gravity, written in math.`, 'win');
+}
+function overlap(cx, cy, r, x, y, w, h) { const nx = Math.max(x, Math.min(cx, x + w)), ny = Math.max(y, Math.min(cy, y + h)); return (cx - nx) ** 2 + (cy - ny) ** 2 <= r * r; }
+function lnStep() {
+  ln.frame++;
+  const b = ln.ball;
+  if (b && ln.flying) {
+    b.vy += G; b.x += b.vx; b.y += b.vy;
+    if (ln.frame % 2 === 0) ln.trail.push([b.x, b.y]);
+    if (!ln.won) {
+      for (const c of ln.crates) if (overlap(b.x, b.y, BR, c.x, c.y, CR, CR)) { hitTower(); break; }
+      if (!ln.won && overlap(b.x, b.y, BR + 4, ln.star.x - 8, ln.star.y - 8, 16, 16)) hitTower();
+    }
+    if (b.y >= GY - BR) {
+      b.y = GY - BR; ln.flying = false;
+      if (!ln.won) lnMsg(b.x < ln.towerX ? 'Too short! Try more power or a higher angle.' : 'Too far! Try less power or a lower angle.', 'bug');
+    } else if (b.x > LW + 20) { ln.flying = false; if (!ln.won) lnMsg('Way too far! It flew off the screen. Try less power.', 'bug'); }
+  }
+  for (const c of ln.crates) if (c.hit) {
+    c.vy += G; c.x += c.vx; c.y += c.vy; c.rot += c.vr;
+    if (c.y >= GY - CR) { c.y = GY - CR; c.vy = 0; c.vx *= 0.8; c.vr *= 0.7; }
+  }
+  if (ln.star.hit) { ln.star.y += ln.star.vy; ln.star.vy -= 0.02; }
+}
+function lnDraw() {
+  lx.setTransform(1, 0, 0, 1, 0, 0); lx.imageSmoothingEnabled = false;
+  lx.fillStyle = '#9fd8ee'; lx.fillRect(0, 0, LW, LH);
+  lx.fillStyle = '#8e8fc4'; for (let x = 0; x < LW; x += 16) { const h = 30 + Math.round((Math.sin(x / 70) + 1) * 18); lx.fillRect(x, GY - 40 - h, 16, h + 40); }
+  lx.fillStyle = '#3aa3d4'; lx.fillRect(0, GY - 40, LW, 40);
+  lx.fillStyle = '#7fd0f0'; for (let x = (ln.frame % 32); x < LW; x += 32) lx.fillRect(x, GY - 30, 10, 2);
+  lx.fillStyle = '#f3dcae'; lx.fillRect(0, GY, LW, LH - GY);
+  lx.fillStyle = '#e2c48d'; for (let x = 7; x < LW; x += 23) lx.fillRect(x, GY + 10 + (x % 3) * 8, 4, 2);
+  lx.fillStyle = INK; lx.fillRect(0, GY, LW, 3);
+  // trail
+  lx.fillStyle = '#ffffff'; for (const [x, y] of ln.trail) lx.fillRect(Math.round(x) - 2, Math.round(y) - 2, 4, 4);
+  // launcher
+  const a = +$('#lAngle').value * Math.PI / 180;
+  lx.save(); lx.translate(LX0, LY0); lx.rotate(-a);
+  lx.fillStyle = INK; lx.fillRect(-4, -8, 38, 16); lx.fillStyle = '#13a59f'; lx.fillRect(-2, -6, 34, 12); lx.fillStyle = '#6fe3d6'; lx.fillRect(0, -6, 32, 3);
+  lx.restore();
+  lx.fillStyle = INK; lx.fillRect(LX0 - 20, GY - 18, 40, 18); lx.fillStyle = '#ff7a3d'; lx.fillRect(LX0 - 18, GY - 16, 36, 14);
+  lx.fillStyle = INK; lx.beginPath(); lx.arc(LX0, LY0, 9, 0, Math.PI * 2); lx.fill(); lx.fillStyle = '#ffd23f'; lx.beginPath(); lx.arc(LX0, LY0, 6, 0, Math.PI * 2); lx.fill();
+  // crates
+  for (const c of ln.crates) {
+    lx.save(); lx.translate(c.x + CR / 2, c.y + CR / 2); lx.rotate(c.rot);
+    lx.fillStyle = INK; lx.fillRect(-CR / 2, -CR / 2, CR, CR);
+    lx.fillStyle = '#c0843f'; lx.fillRect(-CR / 2 + 2, -CR / 2 + 2, CR - 4, CR - 4);
+    lx.fillStyle = '#8d5a28'; lx.fillRect(-CR / 2 + 2, -2, CR - 4, 4); lx.fillRect(-2, -CR / 2 + 2, 4, CR - 4);
+    lx.restore();
+  }
+  // star
+  const st = ln.star; if (st.y > -20) {
+    lx.fillStyle = INK; lx.fillRect(st.x - 3, st.y - 9, 6, 18); lx.fillRect(st.x - 9, st.y - 3, 18, 6);
+    lx.fillStyle = '#ffd23f'; lx.fillRect(st.x - 2, st.y - 8, 4, 16); lx.fillRect(st.x - 8, st.y - 2, 16, 4); lx.fillRect(st.x - 4, st.y - 4, 8, 8);
+  }
+  // ball
+  const b = ln.ball;
+  if (b) { lx.fillStyle = INK; lx.beginPath(); lx.arc(b.x, b.y, BR + 2, 0, Math.PI * 2); lx.fill(); lx.fillStyle = '#ff5a4a'; lx.beginPath(); lx.arc(b.x, b.y, BR, 0, Math.PI * 2); lx.fill(); lx.fillStyle = '#ffb3a9'; lx.fillRect(Math.round(b.x) - 3, Math.round(b.y) - 3, 3, 3); }
+  // labels
+  lx.fillStyle = INK; lx.font = '600 15px "Pixelify Sans", monospace';
+  lx.fillText(`${$('#lAngle').value}°`, LX0 + 26, GY - 26);
+}
+function lnLoop() {
+  if (!launchOpen) return;
+  lnStep(); if (ln.flying) lnStep();
+  lnDraw();
+  ln.raf = requestAnimationFrame(lnLoop);
+}
+function launchKey(e) {
+  if (e.target && e.target.type === 'range') { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lnLaunch(); } return; }
+  const A = $('#lAngle'), Pw = $('#lPower');
+  const bump = (el, d) => { el.value = Math.max(+el.min, Math.min(+el.max, +el.value + d)); el.dispatchEvent(new Event('input')); };
+  if (e.key === 'ArrowUp') { e.preventDefault(); bump(A, 2); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); bump(A, -2); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); bump(Pw, 2); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); bump(Pw, -2); }
+  else if (e.key === ' ' || e.key === 'Enter') { if (document.activeElement && document.activeElement.tagName === 'BUTTON' && document.activeElement.id !== 'lnGo') return; e.preventDefault(); lnLaunch(); }
+  else if (e.key === 'Escape') closeLaunch();
+}
+$('#lAngle').addEventListener('input', () => { $('#lAngleV').textContent = $('#lAngle').value + '°'; });
+$('#lPower').addEventListener('input', () => { $('#lPowerV').textContent = $('#lPower').value; });
+$('#lnGo').addEventListener('click', lnLaunch);
+$('#lnNew').addEventListener('click', () => { if (ln.flying) return; lnReset(true); lnMsg('New spot! Adjust and try again.'); });
+$('#lnClose').addEventListener('click', closeLaunch);
+
+/* confetti */
+function confetti(n) {
+  if (reduceMotion) return;
+  const box = document.createElement('div'); box.className = 'confetti';
+  const cols = ['#ff7a3d', '#13a59f', '#ffd23f', '#57a54b', '#ff6f91', '#4ab3ff'];
+  for (let i = 0; i < n; i++) { const p = document.createElement('i'); p.style.left = Math.random() * 100 + '%'; p.style.background = cols[i % cols.length]; p.style.animationDuration = (1.6 + Math.random() * 1.6) + 's'; p.style.animationDelay = (Math.random() * .4) + 's'; box.appendChild(p); }
+  document.body.appendChild(box); setTimeout(() => box.remove(), 3800);
+}
+
+/* ============ ROBOT LAB ============ */
+// tabs
+const TABS = ['race', 'help', 'think'];
+function selectTab(id) { for (const t of TABS) { $('#tab-' + t).setAttribute('aria-selected', String(t === id)); $('#p-' + t).hidden = t !== id; } if (id === 'race') drawDots(true); }
+for (const t of TABS) $('#tab-' + t).addEventListener('click', () => selectTab(t));
+
+// animated robot faces
+const botCanvases = [$('#labBot'), $('#raceBot')].map((cv) => { const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; return c; });
+let botMood = 'idle', labLoopOn = false;
+function labLoopStart() { if (labLoopOn) return; labLoopOn = true; requestAnimationFrame(labLoop); }
+function labLoop(t) {
+  if ($('#lab').hidden) { labLoopOn = false; return; }
+  for (const c of botCanvases) drawRobot(c, botMood, t);
+  stepDots(t);
+  requestAnimationFrame(labLoop);
+}
+
+/* ---- likelihood: common words are more likely to be the answer ---- */
+function rankList(cands) {
+  const wt = (w) => WEIGHT.get(w) || 300;
+  const tot = cands.reduce((a, w) => a + wt(w), 0);
+  return cands.map((w) => ({ w, p: wt(w) / tot })).sort((a, b) => b.p - a.p);
+}
+function pct(p) { return p >= 0.995 ? '100%' : p < 0.01 ? '<1%' : Math.round(p * 100) + '%'; }
+function renderRank(el, cands, label) {
+  if (!cands.length) { el.innerHTML = ''; return; }
+  const r = rankList(cands), top = r.slice(0, 8), max = top[0].p;
+  el.innerHTML = `<div class="rank-head"><span class="eyebrow">${label || 'Words I think it could be'}</span><span class="rank-sub">most likely first</span></div>
+    <ol class="rank">${top.map((x, i) => `<li class="${i === 0 ? 'top' : ''}" style="--i:${i}"><span class="rk">#${i + 1}</span><span class="rw">${UP(x.w)}</span><span class="rb"><i style="width:${Math.max(2, x.p / max * 100).toFixed(1)}%"></i></span><span class="rp">${pct(x.p)}</span></li>`).join('')}</ol>
+    ${r.length > 8 ? `<p class="rank-more">+ ${fmt(r.length - 8)} more word${r.length - 8 === 1 ? '' : 's'}, each less likely</p>` : ''}`;
+}
+
+/* ---- race ---- */
+const race = { secret: '', all: [], cands: [], rows: 0, busy: false, solved: false, auto: false, classN: null, dying: new Map(), dead: new Set(), started: false };
+const raceBoard = $('#raceBoard');
+function buildBoard(el) { el.innerHTML = Array.from({ length: 6 }, () => `<div class="wrow">${'<div class="wtile"></div>'.repeat(5)}</div>`).join(''); }
+buildBoard(raceBoard);
+const raceSay = $('#raceSay');
+function setSay(html) { raceSay.innerHTML = html; }
+const L = (ch, cls) => `<span class="lt ${cls}">${UP(ch)}</span>`;
+const Wd = (w) => `<span class="word">${UP(w)}</span>`;
+
+function resetRace() {
+  race.secret = ''; race.all = ANSWERS.slice(); race.cands = race.all.slice(); race.rows = 0; race.busy = false; race.solved = false; race.started = false;
+  race.dying.clear(); race.dead.clear(); setAuto(false);
+  buildBoard(raceBoard);
+  $('#raceSetup').hidden = false;
+  $('#moveBtn').disabled = true; $('#autoBtn').disabled = true;
+  $('#scoreBot').textContent = '–'; $('#raceResult').textContent = '';
+  setCount(race.cands.length);
+  $('#raceCountLabel').textContent = 'words could be the answer';
+  setSay(`<p>I know ${fmt(ANSWERS.length)} five-letter words. Each dot is one of them. Give me the class's secret word and watch me cross words out!</p>`);
+  renderRank($('#raceRank'), ANSWERS, 'Before any clues, my best guesses');
+  botMood = 'idle';
+  drawDots(true);
+  $('#secretInput').value = ''; $('#secretErr').textContent = '';
+}
+function setCount(n) { $('#raceCount').textContent = fmt(n); }
+function animateCount(from, to) {
+  const el = $('#raceCount'); const t0 = performance.now(); const d = reduceMotion ? 1 : 900;
+  const tick = (now) => { const k = Math.min(1, (now - t0) / d); const e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(from + (to - from) * e)); if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+
+// secret word form
+$('#peekBtn').addEventListener('click', () => { const i = $('#secretInput'); const masked = i.classList.toggle('masked'); $('#peekBtn').textContent = masked ? 'Show' : 'Hide'; });
+$('#randBtn').addEventListener('click', () => { const i = $('#secretInput'); i.value = UP(ANSWERS[Math.floor(Math.random() * Math.min(1200, ANSWERS.length))]); i.classList.add('masked'); $('#peekBtn').textContent = 'Show'; $('#secretErr').textContent = ''; });
+$('#secretInput').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5); $('#secretErr').textContent = ''; });
+$('#classPicker').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#classPicker button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  race.classN = +b.dataset.n; $('#scoreClass').textContent = race.classN === 0 ? 'X' : race.classN;
+  if (race.solved) showResult();
+});
+$('#secretForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const w = $('#secretInput').value.toLowerCase();
+  if (!/^[a-z]{5}$/.test(w)) { $('#secretErr').textContent = 'Type exactly 5 letters.'; $('#secretInput').focus(); return; }
+  race.secret = w; race.all = ANSWERS.slice();
+  let note = '';
+  if (!ANSWERS.includes(w)) { race.all.push(w); note = `<p>I didn't have ${Wd(w)} on my list, so I added it. Now it's a fair game.</p>`; }
+  race.cands = race.all.slice(); race.started = true;
+  $('#raceSetup').hidden = true;
+  $('#moveBtn').disabled = false; $('#autoBtn').disabled = false;
+  setCount(race.cands.length); drawDots(true);
+  renderRank($('#raceRank'), race.cands, 'Before any clues, my best guesses');
+  setSay(`${note}<p>Got it! I'm not peeking at the word. I only get the colors back, just like you. Common words are more likely, so they're at the top of my list. Press <b>Robot's next guess</b> to watch me think.</p>`);
+  $('#moveBtn').focus({ preventScroll: true });
+});
+function setAuto(on) { race.auto = on; $('#autoBtn').setAttribute('aria-pressed', String(on)); $('#autoBtn').textContent = on ? 'Stop auto-play' : 'Auto-play'; }
+$('#autoBtn').addEventListener('click', async () => { setAuto(!race.auto); while (race.auto && !race.solved) { if (!race.busy) await robotMove(); await wait(1300); } });
+$('#moveBtn').addEventListener('click', () => robotMove());
+$('#newBtn').addEventListener('click', () => resetRace());
+
+function reasonFor(pick, n, isFirst) {
+  const W = Wd(pick.word);
+  if (isFirst) return `<p>I always start with ${W}. Letters like ${[...new Set(pick.word)].map((c) => UP(c)).join(', ')} show up in lots of words, so the colors tell me a lot.</p>`;
+  if (n === 1) return `<p>Only one word fits all the clues. It has to be ${W}!</p>`;
+  if (n === 2) return `<p>Just two words left: ${race.cands.map(Wd).join(' or ')}. ${W} is more likely, so I'll try it first.</p>`;
+  const left = pick.biggest === 1 ? 'just 1 word' : `at most ${fmt(pick.biggest)} words`;
+  const top = rankList(race.cands)[0].w;
+  if (pick.isCandidate && pick.word === top) return `<p>${W} is my #1 guess, and even if it's wrong, I'll have ${left} left.</p>`;
+  if (pick.isCandidate) return `<p>${Wd(top)} is my #1 word, but I'll try ${W} first. It could be the answer too, and it rules out more words. After this I'll have ${left} left.</p>`;
+  return `<p>Sneaky move! ${W} can't be the answer, but it tests a bunch of new letters at once. After this guess I'll have ${left} left.</p>`;
+}
+function explainClues(word, pat) {
+  const g = [], y = [], x = [];
+  const seen = new Set();
+  for (let i = 0; i < 5; i++) {
+    const c = word[i];
+    if (pat[i] === 2) g.push(L(c, 'g')); else if (pat[i] === 1) y.push(L(c, 'y'));
+  }
+  for (let i = 0; i < 5; i++) { const c = word[i]; if (pat[i] === 0 && !seen.has(c) && ![...word].some((d, j) => d === c && pat[j] > 0)) { seen.add(c); x.push(L(c, 'x')); } }
+  const list = (a) => a.length === 1 ? a[0] : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const out = [];
+  if (g.length) out.push(`<li>${list(g)} ${g.length === 1 ? 'is' : 'are'} in the right spot.</li>`);
+  if (y.length) out.push(`<li>${list(y)} ${y.length === 1 ? 'is' : 'are'} in the word, but somewhere else.</li>`);
+  if (x.length) out.push(`<li>${list(x)} ${x.length === 1 ? 'is' : 'are'} not in the word at all.</li>`);
+  return `<ul>${out.join('')}</ul>`;
+}
+async function robotMove() {
+  if (race.busy || race.solved || !race.started) return;
+  race.busy = true; $('#moveBtn').disabled = true;
+  const n = race.cands.length, isFirst = race.rows === 0;
+  botMood = 'think';
+  setSay(`<p>Thinking... checking ${fmt(n)} word${n === 1 ? '' : 's'}.</p>`);
+  await wait(isFirst ? 700 : 900);
+  let pick;
+  if (isFirst) pick = Object.assign({ word: OPENER, isCandidate: race.cands.includes(OPENER) }, S.score(OPENER, race.cands));
+  else {
+    pick = S.best(race.cands);
+    const r = rankList(race.cands);
+    if ((r[0].p >= 0.5 && race.cands.length <= 4) || race.cands.length <= 2) pick = Object.assign({ word: r[0].w, isCandidate: true }, S.score(r[0].w, race.cands));
+  }
+  botMood = 'idle';
+  setSay(reasonFor(pick, n, isFirst));
+  const row = raceBoard.children[race.rows];
+  const tiles = [...row.children];
+  for (let i = 0; i < 5; i++) { tiles[i].textContent = UP(pick.word[i]); tiles[i].classList.add('filled'); await wait(90); }
+  await wait(1100);
+  const code = S.feedback(pick.word, race.secret); const pat = S.decode(code);
+  for (let i = 0; i < 5; i++) {
+    const tl = tiles[i]; tl.classList.add('flip');
+    await wait(220);
+    tl.classList.add(pat[i] === 2 ? 'g' : pat[i] === 1 ? 'y' : 'x');
+    await wait(230);
+  }
+  race.rows++;
+  const before = race.cands;
+  const after = S.filter(before, pick.word, code);
+  const afterSet = new Set(after);
+  const now = performance.now();
+  for (const w of before) if (!afterSet.has(w)) race.dying.set(w, now);
+  race.cands = after;
+  animateCount(before.length, after.length);
+  if (pick.word === race.secret) {
+    race.solved = true; botMood = 'happy';
+    setSay(`<p>All green! The word is ${Wd(race.secret)}. I solved it in <b>${race.rows}</b> guess${race.rows > 1 ? 'es' : ''}.</p>`);
+    $('#raceCountLabel').textContent = 'word left. Solved!';
+    $('#scoreBot').textContent = race.rows;
+    showResult(); confetti(70); setAuto(false);
+  } else {
+    const crossed = before.length - after.length;
+    setSay(`${explainClues(pick.word, pat)}<p>So I crossed out <b>${fmt(crossed)}</b> word${crossed === 1 ? '' : 's'}. Now <b>${fmt(after.length)}</b> could be the answer.</p>`);
+    $('#raceCountLabel').textContent = after.length === 1 ? 'word could be the answer' : 'words could be the answer';
+    $('#moveBtn').disabled = false;
+  }
+  renderRank($('#raceRank'), race.cands, race.solved ? 'The answer' : 'Words I think it could be');
+  race.busy = false;
+}
+function showResult() {
+  if (!race.solved) return;
+  const r = race.rows, c = race.classN;
+  let msg = `The robot needed ${r} guess${r > 1 ? 'es' : ''}.`;
+  if (c === 0) msg = 'The robot got it this time. Great try, class!';
+  else if (c != null) msg = c < r ? 'The class wins! Humans beat the robot!' : c === r ? "It's a tie! Humans and robots, equally smart." : 'The robot wins this round!';
+  $('#raceResult').textContent = msg;
+}
+
+/* dot field: every dot is one word on the robot's list */
+const dotsCanvas = $('#raceDots'); const dctx = dotsCanvas.getContext('2d');
+let dotGeom = null;
+function drawDots(resize) {
+  if ($('#lab').hidden || $('#p-race').hidden) return;
+  const n = race.all.length || ANSWERS.length;
+  if (resize || !dotGeom) {
+    const w = dotsCanvas.clientWidth || 400; const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const size = w > 520 ? 7 : 6; const cols = Math.floor(w / size); const rows = Math.ceil(n / cols);
+    dotsCanvas.width = Math.floor(w * dpr); dotsCanvas.height = Math.floor(rows * size * dpr); dotsCanvas.style.height = (rows * size) + 'px';
+    dotGeom = { w, size, cols, dpr };
+  }
+  paintDots(performance.now());
+}
+function paintDots(now) {
+  const { size, cols, dpr } = dotGeom; const list = race.all.length ? race.all : ANSWERS;
+  const alive = new Set(race.cands.length ? race.cands : list);
+  dctx.setTransform(dpr, 0, 0, dpr, 0, 0); dctx.clearRect(0, 0, dotsCanvas.width, dotsCanvas.height);
+  const d = size - 2;
+  for (let i = 0; i < list.length; i++) {
+    const w = list[i]; const x = (i % cols) * size, y = Math.floor(i / cols) * size;
+    let col = '#d7dee4';
+    if (alive.has(w)) col = '#13a59f';
+    else if (race.dying.has(w)) { const k = (now - race.dying.get(w)) / 1400; if (k < 1) col = k < .55 ? '#ff7a3d' : mix('#ff7a3d', '#d7dee4', (k - .55) / .45); else { race.dying.delete(w); race.dead.add(w); } }
+    dctx.fillStyle = col; dctx.fillRect(x, y, d, d);
+  }
+}
+function stepDots(now) { if (race.dying.size && dotGeom && !$('#p-race').hidden) paintDots(now); }
+function mix(a, b, k) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16); const c = [16, 8, 0].map((s) => Math.round(((pa >> s) & 255) * (1 - k) + ((pb >> s) & 255) * k)); return `rgb(${c.join(',')})`; }
+
+/* ---- helper ---- */
+const help = { clues: [], cur: [0, 0, 0, 0, 0], cands: ANSWERS.slice() };
+const hRows = $('#hRows'), hInput = $('#hInput');
+function renderHelper() {
+  const rowHtml = (w, pat, edit) => `<div class="h-row${edit ? ' edit' : ''}">${[0, 1, 2, 3, 4].map((i) => { const ch = w[i] || ''; const cls = ch ? ['x', 'y', 'g'][pat[i]] : ''; return edit ? `<button type="button" class="wtile ${ch ? 'filled ' + cls : ''}" data-i="${i}" aria-label="Letter ${i + 1}${ch ? ' ' + UP(ch) : ''}, tap to change color">${UP(ch)}</button>` : `<div class="wtile ${cls}">${UP(ch)}</div>`; }).join('')}</div>`;
+  hRows.innerHTML = help.clues.map((c) => rowHtml(c.w, c.p, false)).join('') + (help.clues.length < 6 ? rowHtml(hInput.value.toLowerCase(), help.cur, true) : '');
+}
+hRows.addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (!b || !b.textContent) return; const i = +b.dataset.i; help.cur[i] = (help.cur[i] + 1) % 3; renderHelper(); });
+hInput.addEventListener('input', () => { hInput.value = hInput.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5); $('#hErr').textContent = ''; renderHelper(); });
+hInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addClue(); } });
+function addClue() {
+  const w = hInput.value.toLowerCase();
+  if (!/^[a-z]{5}$/.test(w)) { $('#hErr').textContent = 'Type a 5-letter guess first.'; hInput.focus(); return; }
+  help.clues.push({ w, p: help.cur.slice() }); help.cur = [0, 0, 0, 0, 0]; hInput.value = '';
+  recompute();
+}
+function recompute() {
+  let c = ANSWERS.slice();
+  for (const k of help.clues) c = S.filter(c, k.w, S.encode(k.p));
+  help.cands = c; renderHelper();
+  $('#hCount').textContent = fmt(c.length);
+  const lastWin = help.clues.length && help.clues[help.clues.length - 1].p.every((v) => v === 2);
+  if (lastWin) { $('#hBest').textContent = UP(help.clues[help.clues.length - 1].w); $('#hWhy').textContent = 'All green. You solved it!'; $('#hUse').hidden = true; $('#hRank').innerHTML = ''; return; }
+  if (!c.length) { $('#hBest').textContent = '?????'; $('#hWhy').textContent = "No words on my list match those colors. Double-check each tile's color against your game."; $('#hUse').hidden = true; $('#hRank').innerHTML = ''; return; }
+  $('#hUse').hidden = false;
+  $('#hBest').textContent = '.....'; $('#hWhy').textContent = 'Thinking...';
+  setTimeout(() => {
+    let pick = help.clues.length ? S.best(c) : Object.assign({ word: OPENER, isCandidate: true }, S.score(OPENER, c));
+    const r = rankList(c);
+    if (help.clues.length && ((r[0].p >= 0.5 && c.length <= 4) || c.length <= 2)) pick = Object.assign({ word: r[0].w, isCandidate: true }, S.score(r[0].w, c));
+    $('#hBest').textContent = UP(pick.word);
+    $('#hWhy').textContent = c.length === 1 ? 'Only one word fits. That has to be it!'
+      : pick.isCandidate ? `It could be the answer, and if not, at most ${fmt(pick.biggest)} word${pick.biggest === 1 ? '' : 's'} will be left.`
+      : `It can't be the answer, but it tests new letters. Afterward, at most ${fmt(pick.biggest)} word${pick.biggest === 1 ? '' : 's'} will be left.`;
+    help.best = pick.word;
+  }, 30);
+  renderRank($('#hRank'), c, help.clues.length ? 'Words it could be' : 'Before any clues, the best bets');
+}
+$('#hAdd').addEventListener('click', addClue);
+$('#hUndo').addEventListener('click', () => { help.clues.pop(); recompute(); });
+$('#hReset').addEventListener('click', () => { help.clues = []; help.cur = [0, 0, 0, 0, 0]; hInput.value = ''; recompute(); });
+$('#hUse').addEventListener('click', () => { if (!help.best) return; hInput.value = UP(help.best); help.cur = [0, 0, 0, 0, 0]; renderHelper(); hInput.focus(); });
+
+/* ---- think tab numbers (from testing the robot on its whole list) ---- */
+$('#nWords').textContent = fmt(ANSWERS.length);
+$('#worstN').textContent = STATS.worst; $('#avgN').textContent = STATS.avg;
+const maxBar = Math.max(...Object.values(STATS.hist));
+$('#bars').innerHTML = [1, 2, 3, 4, 5, 6].map((k) => { const v = STATS.hist[k] || 0; return `<div class="bar"><span>${k} guess${k > 1 ? 'es' : ''}</span><div class="track"><div class="fill" style="width:${(v / maxBar * 100).toFixed(1)}%"></div></div><span class="n">${fmt(v)}</span></div>`; }).join('');
+
+/* ============ boot ============ */
+refreshHud(); resetRace(); recompute();
+fitBoard();
+requestAnimationFrame(loop);
+if (location.hash === '#robot' || location.hash === '#lab') showLab();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitBoard());
+})();
+</script>
+</body>
+</html>
