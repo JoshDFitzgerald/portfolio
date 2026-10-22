@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leo's Jungle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+/* One-screen jungle stage: pixel canvas letterboxed on deep-jungle green, emote buttons underneath. Deliberately single-theme. */
+:root {
+  --bg: #12261a;
+  --bg-2: #1b3624;
+  --ink: #2a1a10;
+  --paper: #fff8e6;
+  --leaf: #4fae5a;
+  --sun: #ffb43a;
+  --text: #f3ead2;
+  --muted: #a9c3a4;
+  --font-display: 'Pixelify Sans', 'Courier New', monospace;
+  --font-body: 'Lexend', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: radial-gradient(120% 90% at 50% 0%, var(--bg-2), var(--bg) 65%); color: var(--text);
+  font-family: var(--font-body); overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.app { height: 100%; display: flex; flex-direction: column; gap: 10px; padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 46px); letter-spacing: .03em; line-height: 1; }
+h1 span { color: var(--sun); }
+.hint { margin: 0; color: var(--muted); font-size: clamp(14px, 1.5vw, 19px); }
+.tools { display: flex; gap: 8px; }
+.stage { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; }
+.board { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; box-shadow: 0 0 0 4px var(--ink), 0 0 0 8px #2f5a35, 0 18px 40px rgba(0, 0, 0, .5); background: #0d1a10; overflow: hidden; container-type: inline-size; }
+canvas#scene { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+canvas#scene.over { cursor: pointer; }
+.bubble {
+  position: absolute; transform: translate(-50%, -100%); pointer-events: none;
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 4.2cqw, 54px); line-height: 1;
+  color: var(--ink); background: var(--paper); border: 4px solid var(--ink); padding: .25em .5em; white-space: nowrap;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .25);
+}
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -14px; width: 16px; height: 16px; background: var(--paper); border-right: 4px solid var(--ink); border-bottom: 4px solid var(--ink); transform: translateX(-50%) rotate(45deg); }
+.bubble.pop { animation: pop .35s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { from { transform: translate(-50%, -100%) scale(.3); } to { transform: translate(-50%, -100%) scale(1); } }
+.emotes { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 1100px) { .emotes { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .emotes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.emo, .tool {
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(13px, 1.35vw, 18px); letter-spacing: .02em;
+  color: var(--ink); background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 4px 0 #050a06;
+  padding: 10px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.emo b { font-size: .8em; color: #7a6a4a; }
+.emo:active, .tool:active { transform: translateY(3px); box-shadow: 0 1px 0 #050a06; }
+.emo.on { background: var(--sun); }
+.tool { flex-direction: row; padding: 8px 12px; background: transparent; color: var(--text); border-color: var(--text); }
+button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .bubble.pop { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Leo's <span>Jungle</span></h1>
+      <p class="hint">Tap Leo or hover over him to see what he does. Or pick a move below.</p>
+    </div>
+    <div class="tools">
+      <button class="tool" id="soundBtn" type="button" aria-pressed="true">Sound: on</button>
+      <button class="tool" id="fsBtn" type="button">Full screen</button>
+    </div>
+  </header>
+  <main class="stage" id="stage">
+    <div class="board" id="board">
+      <canvas id="scene" width="320" height="180" aria-label="Leo the lion sitting in a jungle"></canvas>
+      <div class="bubble" id="bubble" hidden></div>
+    </div>
+  </main>
+  <nav class="emotes" id="emotes" aria-label="Leo's moves"></nav>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const W = 320, H = 180;
+const cv = $('#scene'), c = cv.getContext('2d');
+c.imageSmoothingEnabled = false;
+
+/* ---------- pixel helpers ---------- */
+const R = (col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
+function blob(cx, cy, rx, ry, fill, ink, radius) {
+  // crisp filled ellipse (or custom radius function) with a 1px outline
+  const f = radius || (() => 1);
+  const x0 = Math.floor(cx - rx * 1.4 - 2), x1 = Math.ceil(cx + rx * 1.4 + 2), y0 = Math.floor(cy - ry * 1.4 - 2), y1 = Math.ceil(cy + ry * 1.4 + 2);
+  const inside = (x, y) => { const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry; return dx * dx + dy * dy <= Math.pow(f(Math.atan2(dy, dx)), 2); };
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (inside(x, y)) { c.fillStyle = fill; c.fillRect(x, y, 1, 1); }
+    else if (ink && (inside(x + 1, y) || inside(x - 1, y) || inside(x, y + 1) || inside(x, y - 1))) { c.fillStyle = ink; c.fillRect(x, y, 1, 1); }
+  }
+}
+function pix(rows, x, y, pal) { for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const ch = rows[j][i]; if (ch !== '.') R(pal[ch], x + i, y + j, 1, 1); } }
+
+/* ---------- jungle backdrop (drawn once) ---------- */
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+(() => {
+  const b = bg.getContext('2d');
+  const r = (col, x, y, w, h) => { b.fillStyle = col; b.fillRect(x, y, w, h); };
+  const d = (cx, cy, rad, col) => { b.fillStyle = col; for (let y = -rad; y <= rad; y++) { const w = Math.floor(Math.sqrt(rad * rad - y * y)); b.fillRect(cx - w, cy + y, w * 2 + 1, 1); } };
+  r('#8abd6b', 0, 0, W, H);
+  const rows = ['#bfe39a', '#b3dc8f', '#a5d283', '#97c776', '#8abd6b'];
+  rows.forEach((col, i) => r(col, 0, i * 26, W, 27));
+  // far trees
+  for (let x = -10; x < W + 20; x += 18) { const h = 60 + Math.round(Math.sin(x * .07) * 14 + Math.sin(x * .19) * 6); d(x, 128 - h * .35, 16, '#7fb466'); }
+  for (const tx of [26, 74, 248, 296]) { r('#6b4a2e', tx, 20, 10, 130); r('#5a3c24', tx + 7, 20, 3, 130); r('#7e5a38', tx + 1, 20, 2, 130); }
+  // mid bushes
+  for (let x = -10; x < W + 20; x += 14) { const yy = 132 + Math.round(Math.sin(x * .11) * 5); d(x, yy, 13, '#4f9447'); d(x + 6, yy - 6, 8, '#5ea653'); }
+  // canopy across the top
+  for (let x = -10; x < W + 20; x += 12) { const yy = 10 + Math.round(Math.sin(x * .09) * 6 + Math.sin(x * .23) * 4); d(x, yy, 15, '#2f6b35'); d(x + 5, yy + 8, 9, '#3d7d3f'); }
+  // ground
+  r('#6fa53e', 0, 148, W, 32); r('#5f9435', 0, 148, W, 2);
+  for (let i = 0; i < 70; i++) { const x = (i * 47) % W, y = 152 + (i * 13) % 26; r('#4f8a2c', x, y, 1, 3); r('#4f8a2c', x + 2, y + 1, 1, 2); }
+  for (let i = 0; i < 14; i++) { const x = (i * 71 + 9) % W, y = 156 + (i * 17) % 20; r(['#ffd23f', '#ff6f91', '#ffffff'][i % 3], x, y, 2, 2); r('#3e7a24', x, y + 2, 1, 2); }
+  // a big rock for Leo to sit on
+  for (let y = -9; y <= 9; y++) { const w = Math.floor(Math.sqrt(1 - (y / 9) ** 2) * 52); r(y < -5 ? '#a7a9b4' : '#8d8f9c', 160 - w, 160 + y, w * 2, 1); }
+  r('#2a1a10', 110, 160, 100, 0);
+})();
+
+/* foreground leaves (in front of Leo, drawn once) */
+const fg = document.createElement('canvas'); fg.width = W; fg.height = H;
+(() => {
+  const b = fg.getContext('2d');
+  const leaf = (x, y, len, ang, col, vein) => {
+    for (let i = 0; i < len; i++) {
+      const t = i / len, wdt = Math.sin(t * Math.PI) * len * .32;
+      const px = x + Math.cos(ang) * i, py = y + Math.sin(ang) * i;
+      b.fillStyle = col;
+      for (let k = -wdt; k <= wdt; k++) b.fillRect(Math.round(px - Math.sin(ang) * k), Math.round(py + Math.cos(ang) * k), 1, 1);
+      b.fillStyle = vein; b.fillRect(Math.round(px), Math.round(py), 1, 1);
+    }
+  };
+  leaf(-4, 186, 52, -1.0, '#2e7a37', '#3f9447'); leaf(10, 190, 44, -1.35, '#3a8d40', '#4ea455'); leaf(-8, 168, 40, -.45, '#25682d', '#347c3a');
+  leaf(324, 186, 52, Math.PI + 1.0, '#2e7a37', '#3f9447'); leaf(310, 190, 44, Math.PI + 1.35, '#3a8d40', '#4ea455'); leaf(330, 166, 40, Math.PI + .45, '#25682d', '#347c3a');
+})();
+
+/* ---------- Leo ---------- */
+const LC = { ink: '#2a1a10', mane: '#c8641e', mane2: '#e0802c', maneD: '#9c4a14', fur: '#f2b44a', furL: '#ffd27a', furD: '#d4923a', muz: '#fff1cf', nose: '#5a2a26', mouth: '#6b1f1f', tongue: '#f07a8a', white: '#ffffff', blush: '#ff8a8a', heart: '#ff4d6d' };
+const CX = 160;
+function drawLeo(p, t) {
+  const bx = CX + p.bx, by = p.by;
+  // tail
+  const tw = Math.sin(t / 420) * .5 + p.tail;
+  const tail = [];
+  for (let i = 0; i <= 18; i++) { const u = i / 18; tail.push([bx + 22 + u * 30 + Math.sin(u * 3 + tw) * 3 * u, 152 + by - Math.pow(u, 1.6) * (22 + tw * 8)]); }
+  for (const [x, y] of tail) blob(x, y, 2.3, 2.3, LC.ink, null);
+  for (const [x, y] of tail) blob(x, y, 1.4, 1.4, LC.fur, null);
+  const [tx, ty] = tail[tail.length - 1]; blob(tx + 1, ty - 2, 4.2, 4.6, LC.mane, LC.ink); blob(tx, ty - 3, 2, 2, LC.mane2, null);
+  // body + legs
+  blob(bx, 140 + by, 25, 20, LC.fur, LC.ink);
+  blob(bx - 19, 152 + by, 11, 8, LC.fur, LC.ink); blob(bx + 19, 152 + by, 11, 8, LC.fur, LC.ink);
+  blob(bx, 146 + by, 13, 13, LC.furL, null);
+  // front paws (hidden while the arms are busy dancing)
+  if (!p.arms) for (const s of [-1, 1]) {
+    const lift = (s === 1 ? p.paw : 0);
+    blob(bx + s * 9, 150 + by - lift, 5, 9, LC.fur, LC.ink);
+    blob(bx + s * 10, 158 + by - lift, 7, 4, LC.furL, LC.ink);
+    R(LC.ink, bx + s * 10 - 2, 158 + by - lift, 1, 2); R(LC.ink, bx + s * 10 + 1, 158 + by - lift, 1, 2);
+  }
+  // head group
+  const hx = bx + p.hx, hy = 94 + by + p.hy;
+  const ms = p.mane, wob = p.maneWob;
+  blob(hx, hy, 34 * ms, 32 * ms, LC.mane, LC.ink, (a) => 1 + 0.12 * Math.abs(Math.sin(a * 6 + wob)));
+  blob(hx, hy + 1, 29 * ms, 27 * ms, LC.mane2, null, (a) => 1 + 0.08 * Math.abs(Math.sin(a * 6 + 0.5 + wob)));
+  for (const s of [-1, 1]) { blob(hx + s * 16, hy - 17, 6, 6, LC.fur, LC.ink); blob(hx + s * 16, hy - 17, 3, 3, LC.furD, null); }
+  blob(hx, hy, 20, 19, LC.fur, LC.ink);
+  blob(hx, hy - 6, 14, 9, LC.furL, null);
+  // cheeks
+  if (p.blush > 0) { c.globalAlpha = p.blush; blob(hx - 12, hy + 6, 3.5, 2.2, LC.blush, null); blob(hx + 12, hy + 6, 3.5, 2.2, LC.blush, null); c.globalAlpha = 1; }
+  // muzzle
+  blob(hx - 5, hy + 8, 6.5, 5.5, LC.muz, null); blob(hx + 5, hy + 8, 6.5, 5.5, LC.muz, null);
+  drawMouth(p.mouth, hx, hy + 11, t);
+  // nose
+  pix(['nnnnnnn', '.nnnnn.', '..nnn..', '...n...'], hx - 3, hy + 2, { n: LC.nose });
+  R('#8a4a44', hx - 2, hy + 2, 2, 1);
+  for (const s of [-1, 1]) { R(LC.furD, hx + s * 8 - (s < 0 ? 1 : 0), hy + 9, 1, 1); R(LC.furD, hx + s * 10 - (s < 0 ? 1 : 0), hy + 8, 1, 1); }
+  drawEyes(p, hx, hy - 4, t);
+  if (p.arms) for (const a of p.arms) drawArm(a);
+}
+function drawArm(pts) {
+  // a chunky furry arm through a list of points, ending in a paw
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 1.5);
+    for (let j = 0; j <= n; j++) blob(x0 + (x1 - x0) * j / n, y0 + (y1 - y0) * j / n, 3.4, 3.4, LC.fur, LC.ink);
+  }
+  for (let i = 1; i < pts.length - 1; i++) blob(pts[i][0], pts[i][1], 3.4, 3.4, LC.fur, null);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 1.5);
+    for (let j = 0; j <= n; j++) blob(x0 + (x1 - x0) * j / n, y0 + (y1 - y0) * j / n, 2.4, 2.4, LC.fur, null);
+  }
+  const [hx, hy] = pts[pts.length - 1]; blob(hx, hy, 4.6, 4.2, LC.furL, LC.ink);
+}
+function drawEyes(p, x, y, t) {
+  const E = p.eyes, k = LC.ink;
+  const eye = (ex, kind) => {
+    if (kind === 'open') { R(k, ex - 2, y - 2, 4, 5); R(LC.white, ex - 1 + p.look, y - 1, 1, 1); }
+    else if (kind === 'closed') { R(k, ex - 3, y + 1, 6, 1); R(k, ex - 3, y, 1, 1); R(k, ex + 2, y, 1, 1); }
+    else if (kind === 'happy') { R(k, ex - 3, y + 1, 1, 1); R(k, ex - 2, y, 1, 1); R(k, ex - 1, y - 1, 2, 1); R(k, ex + 1, y, 1, 1); R(k, ex + 2, y + 1, 1, 1); }
+    else if (kind === 'wide') { R(k, ex - 3, y - 3, 7, 7); R(LC.white, ex - 2, y - 2, 5, 5); R(k, ex - 1 + p.look, y - 1, 3, 3); }
+    else if (kind === 'heart') pix(['.h.h.', 'hhhhh', 'hhhhh', '.hhh.', '..h..'], ex - 2, y - 2, { h: LC.heart });
+    else if (kind === 'squint') { R(k, ex - 3, y, 6, 2); }
+    else if (kind === 'fierce') { R(k, ex - 2, y - 1, 4, 3); R(k, ex - 3 + (ex < x ? 0 : 1), y - 3, 4, 1); }
+    else if (kind === 'side') { R(k, ex - 2, y - 2, 4, 5); R(LC.white, ex + 1, y - 1, 1, 1); }
+  };
+  const L = x - 7, Rr = x + 7;
+  if (E === 'wink') { eye(L, 'open'); eye(Rr, 'happy'); }
+  else if (E === 'fierce') { eye(L, 'fierce'); eye(Rr, 'fierce'); R(k, L - 3, y - 4, 3, 1); R(k, L, y - 3, 2, 1); R(k, Rr + 1, y - 4, 3, 1); R(k, Rr - 1, y - 3, 2, 1); }
+  else { eye(L, E); eye(Rr, E); }
+  if (p.shades != null) {
+    const sy = y - 3 + p.shades;
+    R(k, x - 12, sy, 24, 1); R(k, x - 11, sy, 9, 6); R(k, x + 2, sy, 9, 6); R(k, x - 13, sy, 2, 2); R(k, x + 11, sy, 2, 2);
+    R('#3a4a6a', x - 10, sy + 1, 7, 4); R('#3a4a6a', x + 3, sy + 1, 7, 4);
+    R('#9fc0ff', x - 9, sy + 1, 2, 1); R('#9fc0ff', x + 4, sy + 1, 2, 1);
+    if (p.glint) { R('#ffffff', x + 7, sy + 1, 1, 3); R('#ffffff', x + 6, sy + 2, 3, 1); }
+  }
+}
+function drawMouth(m, x, y, t) {
+  const k = LC.ink;
+  if (m === 'smile') { R(k, x, y - 1, 1, 2); R(k, x - 4, y + 1, 4, 1); R(k, x + 1, y + 1, 4, 1); R(k, x - 5, y, 1, 1); R(k, x + 5, y, 1, 1); }
+  else if (m === 'grin') { R(k, x, y - 1, 1, 1); blob(x + .5, y + 3, 5, 3.4, LC.mouth, k); R(LC.white, x - 3, y + 1, 7, 1); R(LC.tongue, x - 1, y + 4, 3, 2); }
+  else if (m === 'roar') { blob(x + .5, y + 5, 8, 7, LC.mouth, k); R(LC.white, x - 5, y, 2, 3); R(LC.white, x + 4, y, 2, 3); R(LC.white, x - 4, y + 9, 2, 2); R(LC.white, x + 3, y + 9, 2, 2); blob(x + .5, y + 8, 4, 2.5, LC.tongue, null); }
+  else if (m === 'o') { blob(x + .5, y + 3, 2.6, 3, LC.mouth, k); }
+  else if (m === 'yawn') { blob(x + .5, y + 4, 4, 6, LC.mouth, k); blob(x + .5, y + 7, 2.5, 2, LC.tongue, null); }
+  else if (m === 'sneeze') { R(k, x - 3, y + 1, 7, 2); R(LC.mouth, x - 2, y + 1, 5, 1); }
+  else if (m === 'small') { R(k, x - 2, y + 1, 5, 1); R(k, x, y - 1, 1, 2); }
+  else if (m === 'flat') { R(k, x - 3, y + 1, 7, 1); R(k, x, y - 1, 1, 2); }
+}
+
+/* ---------- particles ---------- */
+const parts = [];
+function spawn(type, x, y, vx, vy, life) { parts.push({ type, x, y, vx, vy, life, born: performance.now() }); }
+const SPR = {
+  heart: [['.h.h.', 'hhhhh', 'hhhhh', '.hhh.', '..h..'], { h: '#ff4d6d' }],
+  z: [['zzzz', '..z.', '.z..', 'zzzz'], { z: '#ffffff' }],
+  note: [['..nn', '..nn', '..n.', 'nnn.', 'nnn.'], { n: '#2a1a10' }],
+  spark: [['..y..', '..y..', 'yyyyy', '..y..', '..y..'], { y: '#fff3a0' }],
+  dust: [['dd', 'dd'], { d: '#ffe6b0' }],
+  bang: [['r', 'r', 'r', '.', 'r'], { r: '#ff4d4d' }],
+  leaf: [['.ll', 'll.', 'l..'], { l: '#5fbf5a' }],
+};
+function drawParts(now, dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i], age = (now - q.born) / 1000;
+    if (age > q.life) { parts.splice(i, 1); continue; }
+    q.x += q.vx * dt; q.y += q.vy * dt;
+    if (q.type === 'leaf') { q.vy = 10; q.vx = Math.sin(now / 300 + i) * 12; }
+    const [rows, pal] = SPR[q.type];
+    c.globalAlpha = Math.min(1, (q.life - age) * 3);
+    const sc = q.type === 'z' ? 1 + age * .6 : 1;
+    if (sc === 1) pix(rows, Math.round(q.x), Math.round(q.y), pal);
+    else { c.save(); c.translate(Math.round(q.x), Math.round(q.y)); c.scale(sc, sc); pix(rows, 0, 0, pal); c.restore(); }
+    c.globalAlpha = 1;
+  }
+}
+
+/* ---------- ambient life: butterflies + vines ---------- */
+function drawAmbient(t) {
+  for (const [i, vx] of [[0, 54], [1, 98], [2, 222], [3, 268]].map((a) => a)) {
+    const sway = Math.sin(t / 1500 + i) * 2, len = 34 + i * 9;
+    for (let y = 8; y < len; y++) { const x = vx + Math.round(Math.sin(y / 9 + t / 1500 + i) * (y / len) * 3 + sway * y / len); R('#2f6b35', x, y, 1, 1); if (y % 7 === 0) { R('#4fae5a', x - 2, y, 2, 2); R('#4fae5a', x + 1, y + 2, 2, 2); } }
+  }
+  for (let i = 0; i < 3; i++) {
+    const x = 60 + i * 95 + Math.sin(t / 1300 + i * 2) * 30, y = 50 + i * 12 + Math.sin(t / 700 + i) * 10, f = Math.floor(t / 120 + i) % 2;
+    const col = ['#ffd23f', '#ff8ad0', '#7fd3ff'][i];
+    R(col, x - (f ? 3 : 2), y - 2, f ? 3 : 2, 3); R(col, x + 1, y - 2, f ? 3 : 2, 3); R('#2a1a10', x, y - 2, 1, 4);
+  }
+}
+
+/* ---------- emotes ---------- */
+const EMOTES = [
+  { id: 'roar', label: 'Roar', dur: 2000, say: 'ROAR!' },
+  { id: 'giggle', label: 'Giggle', dur: 1900, say: 'hee hee!' },
+  { id: 'wink', label: 'Wink', dur: 1500, say: 'wink!' },
+  { id: 'love', label: 'Love', dur: 2400, say: 'aww!' },
+  { id: 'sleepy', label: 'Sleepy', dur: 3200, say: 'zzz...' },
+  { id: 'surprised', label: 'Surprised', dur: 1600, say: 'WHOA!' },
+  { id: 'sneeze', label: 'Sneeze', dur: 2400, say: 'ah... ah...' },
+  { id: 'cool', label: 'Cool', dur: 2600, say: 'too cool!' },
+  { id: 'dance', label: 'Dance', dur: 3000, say: 'dance party!' },
+  { id: 'shy', label: 'Shy', dur: 2400, say: '...hi' },
+  { id: 'floss', label: 'Floss', dur: 3200, say: 'floss!' },
+  { id: 'dab', label: 'Dab', dur: 2000, say: 'dab!' },
+];
+let cur = null, last = null;
+const base = () => ({ arms: null, eyes: 'open', mouth: 'smile', hx: 0, hy: 0, bx: 0, by: 0, mane: 1, maneWob: 0, blush: 0, tail: 0, look: 0, paw: 0, shades: null, glint: false, shake: 0 });
+let nextSpawn = 0;
+function pose(now) {
+  const p = base();
+  const tt = now / 1000;
+  p.by = Math.round(Math.sin(tt * 2) * .6);
+  // blink while idle
+  if (!cur && (now % 3600) < 130) p.eyes = 'closed';
+  if (!cur) return p;
+  const e = cur.e, k = Math.min(1, (now - cur.start) / e.dur), s = Math.sin;
+  const every = (ms, fn) => { if (now >= nextSpawn) { nextSpawn = now + ms; fn(); } };
+  const hx = CX + p.bx, hy = 94;
+  switch (e.id) {
+    case 'roar':
+      if (k < .18) { p.hy = 3; p.eyes = 'squint'; p.mouth = 'flat'; }
+      else if (k < .85) { p.eyes = 'fierce'; p.mouth = 'roar'; p.mane = 1.14; p.maneWob = now / 40; p.shake = 2; p.hy = -2; p.tail = 1.2; every(90, () => spawn('dust', hx + (Math.random() - .5) * 70, hy + (Math.random() - .5) * 60, (Math.random() - .5) * 60, -20, .6)); }
+      else { p.eyes = 'happy'; p.mouth = 'grin'; }
+      break;
+    case 'giggle':
+      p.eyes = 'happy'; p.mouth = 'grin'; p.blush = .6; p.by = -Math.round(Math.abs(s(k * Math.PI * 7)) * 4); p.hx = Math.round(s(k * Math.PI * 7) * 1.5); p.tail = s(now / 80) * .8; break;
+    case 'wink':
+      p.eyes = k > .1 && k < .8 ? 'wink' : 'open'; p.mouth = 'grin'; p.hx = 2; p.hy = 1;
+      if (k > .15 && k < .2) every(400, () => spawn('spark', hx + 14, hy - 10, 10, -20, .6));
+      break;
+    case 'love':
+      p.eyes = 'heart'; p.mouth = 'smile'; p.blush = 1; p.by = Math.round(s(k * Math.PI * 4) * 1.5); p.hx = Math.round(s(k * Math.PI * 2) * 2);
+      every(220, () => spawn('heart', hx + (Math.random() - .5) * 50, hy - 20, (Math.random() - .5) * 20, -30, 1.3)); break;
+    case 'sleepy':
+      if (k < .28) { p.eyes = 'closed'; p.mouth = 'yawn'; p.hy = -2; p.paw = Math.round(s(k / .28 * Math.PI) * 10); }
+      else { p.eyes = 'closed'; p.mouth = 'small'; p.hy = 4; p.hx = 3; p.by = Math.round(s(now / 500) * 1); every(650, () => spawn('z', hx + 26, hy - 18, 14, -18, 1.6)); }
+      break;
+    case 'surprised':
+      p.eyes = 'wide'; p.mouth = 'o'; p.mane = 1.1; p.by = k < .35 ? -Math.round(s(k / .35 * Math.PI) * 12) : 0; p.tail = 1.4;
+      if (k < .1) every(500, () => { spawn('bang', hx - 30, hy - 32, 0, -12, .9); spawn('bang', hx + 30, hy - 32, 0, -12, .9); });
+      break;
+    case 'sneeze':
+      if (k < .5) { p.eyes = k < .25 ? 'open' : 'squint'; p.mouth = 'o'; p.hy = -Math.round(k * 8); p.hx = -2; }
+      else if (k < .72) { p.eyes = 'squint'; p.mouth = 'sneeze'; p.hy = 4; p.mane = 1.16; p.maneWob = now / 30; p.shake = 1.5;
+        every(60, () => { spawn('dust', hx + (Math.random() - .5) * 20, hy + 12, (Math.random() - .5) * 140, 40 + Math.random() * 40, .7); if (Math.random() < .4) spawn('leaf', hx + (Math.random() - .5) * 200, -4, 0, 10, 2.4); }); }
+      else { p.eyes = 'happy'; p.mouth = 'grin'; p.blush = .4; }
+      break;
+    case 'cool': {
+      const drop = Math.min(1, k / .3);
+      p.shades = Math.round(-26 * (1 - drop) * (1 - drop)); p.mouth = k > .3 ? 'grin' : 'smile'; p.eyes = 'open'; p.hx = k > .3 ? 2 : 0;
+      p.glint = k > .45 && k < .6; p.tail = .6; break;
+    }
+    case 'dance':
+      p.bx = Math.round(s(k * Math.PI * 8) * 5); p.by = -Math.round(Math.abs(s(k * Math.PI * 8)) * 4); p.hx = Math.round(s(k * Math.PI * 8 + .6) * 2);
+      p.eyes = 'happy'; p.mouth = 'grin'; p.tail = s(now / 70) * 1.2; p.paw = Math.round(Math.abs(s(k * Math.PI * 8)) * 8);
+      every(320, () => spawn('note', hx + (Math.random() < .5 ? -38 : 32), hy - 10, (Math.random() - .5) * 20, -26, 1.2)); break;
+    case 'floss': {
+      const f = Math.sin(k * Math.PI * 12), sh = [CX + p.bx, 127 + p.by];
+      p.bx = Math.round(-f * 4); p.eyes = 'happy'; p.mouth = 'grin'; p.hx = Math.round(f * 2); p.tail = f;
+      const hxp = CX + p.bx + f * 30, hyp = 152;
+      p.arms = [[[CX + p.bx - 13, 127 + p.by], [hxp - 9, hyp + p.by]], [[CX + p.bx + 13, 127 + p.by], [hxp + 9, hyp + p.by]]];
+      every(380, () => spawn('note', hx + (Math.random() < .5 ? -40 : 34), hy - 12, (Math.random() - .5) * 20, -26, 1.2));
+      break;
+    }
+    case 'dab': {
+      const on = k > .15 && k < .85, a = on ? 1 : Math.min(1, k / .15, (1 - k) / .15);
+      const lerp = (u, v) => u + (v - u) * a;
+      p.hx = Math.round(lerp(0, -5)); p.hy = Math.round(lerp(0, 5)); p.eyes = on ? 'closed' : 'open'; p.mouth = on ? 'small' : 'smile'; p.tail = .8;
+      const hxx = CX + p.hx, hyy = 94 + p.hy;
+      p.arms = [
+        [[CX + 13, 127], [lerp(CX + 16, CX + 32), lerp(150, 98)], [lerp(CX + 14, CX + 48), lerp(158, 74)]],
+        [[CX - 13, 127], [lerp(CX - 16, hxx - 14), lerp(150, hyy + 8)], [lerp(CX - 10, hxx + 14), lerp(158, hyy - 10)]],
+      ];
+      if (on) every(260, () => spawn('spark', CX + 50 + (Math.random() - .5) * 10, 66 + (Math.random() - .5) * 10, 20, -30, .5));
+      break;
+    }
+    case 'shy':
+      p.eyes = 'side'; p.mouth = 'small'; p.blush = Math.min(1, k * 3); p.hy = 3; p.hx = -3; p.look = 1; p.paw = k > .2 && k < .85 ? 10 : 0; p.tail = .3; break;
+  }
+  return p;
+}
+function play(i) {
+  const e = EMOTES[i]; last = i;
+  cur = { e, start: performance.now() }; nextSpawn = 0;
+  showBubble(e.say);
+  if (e.id === 'sneeze') setTimeout(() => { if (cur && cur.e === e) showBubble('ACHOO!'); }, e.dur * .5);
+  sound(e.id);
+  document.querySelectorAll('.emo').forEach((b, j) => b.classList.toggle('on', j === i));
+}
+function playRandom() { let i; do { i = Math.floor(Math.random() * EMOTES.length); } while (i === last); play(i); }
+
+/* speech bubble */
+const bubble = $('#bubble'); let bubbleT = 0;
+function showBubble(text) {
+  bubble.textContent = text; bubble.hidden = false;
+  bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+  clearTimeout(bubbleT);
+}
+
+/* ---------- sounds (made with code, no files) ---------- */
+let ac = null, soundOn = true;
+function ctx() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+function tone(a, type, f0, f1, t0, dur, vol) {
+  const o = a.createOscillator(), g = a.createGain(); o.type = type;
+  o.frequency.setValueAtTime(f0, a.currentTime + t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), a.currentTime + t0 + dur);
+  g.gain.setValueAtTime(0.0001, a.currentTime + t0); g.gain.exponentialRampToValueAtTime(vol, a.currentTime + t0 + .02); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t0 + dur);
+  o.connect(g).connect(a.destination); o.start(a.currentTime + t0); o.stop(a.currentTime + t0 + dur + .05);
+}
+function noise(a, t0, dur, vol, f0, f1) {
+  const n = a.sampleRate * dur, buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(); src.buffer = buf;
+  const fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.setValueAtTime(f0, a.currentTime + t0); fl.frequency.exponentialRampToValueAtTime(f1, a.currentTime + t0 + dur);
+  const g = a.createGain(); g.gain.setValueAtTime(0.0001, a.currentTime + t0); g.gain.exponentialRampToValueAtTime(vol, a.currentTime + t0 + .05); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t0 + dur);
+  src.connect(fl).connect(g).connect(a.destination); src.start(a.currentTime + t0); src.stop(a.currentTime + t0 + dur + .05);
+}
+function sound(id) {
+  if (!soundOn) return; const a = ctx(); if (!a) return;
+  const notes = (list, type, step, vol) => list.forEach((f, i) => tone(a, type, f, f, i * step, step * .9, vol));
+  switch (id) {
+    case 'roar': noise(a, .3, 1.2, .5, 1600, 200); tone(a, 'sawtooth', 140, 70, .3, 1.2, .18); tone(a, 'sawtooth', 95, 55, .3, 1.2, .14); break;
+    case 'giggle': notes([880, 990, 880, 1050, 940], 'square', .11, .05); break;
+    case 'wink': tone(a, 'sine', 1500, 2400, .15, .25, .12); break;
+    case 'love': notes([660, 880], 'sine', .22, .14); break;
+    case 'sleepy': noise(a, 0, .9, .12, 600, 300); noise(a, 1.4, .9, .1, 400, 200); break;
+    case 'surprised': tone(a, 'square', 300, 1200, 0, .3, .07); break;
+    case 'sneeze': tone(a, 'sine', 500, 650, 0, .5, .05); tone(a, 'sine', 520, 700, .55, .5, .05); noise(a, 1.2, .45, .45, 5000, 900); break;
+    case 'cool': notes([523, 659, 784, 1047], 'triangle', .12, .12); break;
+    case 'dance': notes([523, 659, 784, 659, 523, 659, 784, 1047], 'square', .16, .04); break;
+    case 'shy': tone(a, 'sine', 700, 500, 0, .3, .08); break;
+    case 'floss': notes([392, 392, 523, 392, 392, 523, 587, 523, 392, 392, 523, 659], 'square', .2, .04); break;
+    case 'dab': noise(a, .2, .35, .3, 3000, 600); tone(a, 'triangle', 400, 900, .2, .25, .1); break;
+  }
+}
+
+/* ---------- controls ---------- */
+const nav = $('#emotes');
+const KEYS = ['1','2','3','4','5','6','7','8','9','0','-','='];
+nav.innerHTML = EMOTES.map((e, i) => `<button type="button" class="emo" data-i="${i}">${e.label}<b>${KEYS[i]}</b></button>`).join('');
+nav.addEventListener('click', (ev) => { const b = ev.target.closest('.emo'); if (b) { play(+b.dataset.i); b.blur(); } });
+document.addEventListener('keydown', (ev) => {
+  const ki = KEYS.indexOf(ev.key);
+  if (ki >= 0) { play(ki); }
+  else if (ev.key === ' ' || ev.key === 'Enter') { if (document.activeElement && document.activeElement.tagName === 'BUTTON') return; ev.preventDefault(); playRandom(); }
+});
+function toLocal(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H]; }
+const overLeo = (x, y) => x > CX - 40 && x < CX + 50 && y > 56 && y < 170;
+let wasOver = false;
+cv.addEventListener('pointermove', (ev) => {
+  const [x, y] = toLocal(ev), o = overLeo(x, y);
+  cv.classList.toggle('over', o);
+  if (o && !wasOver && ev.pointerType === 'mouse' && (!cur || performance.now() - cur.start > cur.e.dur * .7)) playRandom();
+  wasOver = o;
+});
+cv.addEventListener('pointerleave', () => { wasOver = false; cv.classList.remove('over'); });
+cv.addEventListener('click', () => playRandom());
+$('#soundBtn').addEventListener('click', () => { soundOn = !soundOn; $('#soundBtn').textContent = 'Sound: ' + (soundOn ? 'on' : 'off'); $('#soundBtn').setAttribute('aria-pressed', String(soundOn)); });
+$('#fsBtn').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { $('#fsBtn').textContent = 'Use F11'; } });
+
+/* ---------- layout + loop ---------- */
+function fit() {
+  const st = $('#stage'); const w = st.clientWidth, h = st.clientHeight - 10;
+  $('#board').style.width = Math.max(200, Math.floor(Math.min(w, h * 16 / 9))) + 'px';
+}
+addEventListener('resize', fit); fit();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  if (cur && now - cur.start > cur.e.dur) { cur = null; bubble.hidden = true; document.querySelectorAll('.emo').forEach((b) => b.classList.remove('on')); }
+  const p = pose(now);
+  const sh = reduce ? 0 : p.shake;
+  c.setTransform(1, 0, 0, 1, Math.round((Math.random() - .5) * sh * 2), Math.round((Math.random() - .5) * sh * 2));
+  c.drawImage(bg, 0, 0);
+  drawAmbient(now);
+  drawLeo(p, now);
+  drawParts(now, dt);
+  c.drawImage(fg, 0, 0);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  // keep the bubble above Leo's head
+  bubble.style.left = ((CX + p.bx + p.hx) / W * 100) + '%';
+  bubble.style.top = ((94 + p.by + p.hy - 38 * p.mane) / H * 100) + '%';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__leo = { play };
+})();
+</script>
+</body>
+</html>
