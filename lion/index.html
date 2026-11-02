@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leo the Lion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap">
+<style>
+/* One full-screen cartoon scene: Leo sits on the grass in the middle, you tap him, he emotes. Single sunny theme. */
+:root {
+  --ink: #4a2c1a; --face: #f7c46c; --mane: #c9783a; --cream: #fff0d4; --paper: #fffaf0; --sun: #ffd45c;
+  --font: 'Fredoka', 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: #bfe8ff; font-family: var(--font); color: var(--ink); overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.cloud { animation: drift linear infinite; }
+@keyframes drift { from { transform: translateX(-400px); } to { transform: translateX(2000px); } }
+header { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); pointer-events: none; z-index: 3; }
+h1 { margin: 0; font-weight: 700; font-size: clamp(30px, 5vw, 64px); line-height: 1; color: var(--paper); -webkit-text-stroke: 0; text-shadow: 0 4px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink); letter-spacing: .01em; }
+.tools { display: flex; gap: 8px; pointer-events: auto; }
+.tools button { white-space: nowrap; font: 700 clamp(14px, 1.5vw, 18px)/1 var(--font); color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 9px 14px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; }
+.tools button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+button:focus-visible { outline: 3px solid #2b7bd8; outline-offset: 2px; }
+#lion { position: fixed; left: 50%; bottom: 5vh; height: min(74vh, calc(94vw * 1.075)); aspect-ratio: 400 / 430; transform: translateX(-50%); overflow: visible; cursor: pointer; z-index: 1; touch-action: manipulation; }
+.hint { position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); font-weight: 700; font-size: clamp(18px, 2.4vw, 28px); background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 6px 18px; box-shadow: 0 4px 0 var(--ink); z-index: 2; pointer-events: none; animation: nudge 1.4s ease-in-out infinite; white-space: nowrap; }
+.hint.gone { opacity: 0; transition: opacity .4s; animation: none; }
+@keyframes nudge { 50% { transform: translate(-50%, -6px); } }
+.bubble { position: fixed; z-index: 4; pointer-events: none; font-weight: 700; font-size: clamp(22px, 4vw, 48px); line-height: 1; background: var(--paper); border: 4px solid var(--ink); border-radius: 26px; padding: .3em .65em; white-space: nowrap; box-shadow: 0 5px 0 var(--ink); transform: translate(0, -100%); }
+.bubble::after { content: ""; position: absolute; left: 22px; bottom: -15px; width: 22px; height: 22px; background: var(--paper); border-right: 4px solid var(--ink); border-bottom: 4px solid var(--ink); transform: rotate(45deg); }
+.bubble.pop { animation: pop .35s cubic-bezier(.2, 1.7, .4, 1); }
+@keyframes pop { from { transform: translate(0, -100%) scale(.3); } to { transform: translate(0, -100%) scale(1); } }
+@media (max-aspect-ratio: 3/4) { #lion { bottom: 13vh; } .tools button { padding: 7px 11px; } }
+@media (prefers-reduced-motion: reduce) { .cloud, .hint, .bubble.pop { animation: none; } }
+</style>
+</head>
+<body>
+<svg id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fdcff"/><stop offset=".75" stop-color="#e3f6ff"/><stop offset="1" stop-color="#fff4d8"/></linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g transform="translate(1310 170)">
+    <circle r="120" fill="#fffbe0" opacity=".55"/>
+    <circle r="78" fill="var(--sun)" stroke="#4a2c1a" stroke-width="6"/>
+    <path d="M-28 6 Q-20 -2 -12 6 M12 6 Q20 -2 28 6 M-14 24 Q0 36 14 24" fill="none" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <g class="cloud" style="animation-duration:90s;animation-delay:-20s"><path d="M100 160 a40 40 0 0 1 70 -30 a50 50 0 0 1 90 10 a35 35 0 0 1 20 60 h-170 a32 32 0 0 1 -10 -40z" fill="#fff" stroke="#4a2c1a" stroke-width="5"/></g>
+  <g class="cloud" style="animation-duration:120s;animation-delay:-75s"><path d="M100 250 a30 30 0 0 1 55 -22 a40 40 0 0 1 70 8 a28 28 0 0 1 15 48 h-132 a26 26 0 0 1 -8 -34z" fill="#fff" stroke="#4a2c1a" stroke-width="5"/></g>
+  <g class="cloud" style="animation-duration:105s;animation-delay:-50s"><path d="M100 110 a34 34 0 0 1 60 -26 a44 44 0 0 1 78 8 a30 30 0 0 1 18 52 h-146 a28 28 0 0 1 -10 -34z" fill="#fff" stroke="#4a2c1a" stroke-width="5"/></g>
+  <path d="M-20 640 Q200 520 460 600 Q700 520 900 590 Q1150 500 1400 580 Q1520 540 1620 570 V900 H-20Z" fill="#a8dc7e" stroke="#4a2c1a" stroke-width="6"/>
+  <g id="trees"></g>
+  <path d="M-20 700 Q400 650 800 690 Q1200 650 1620 700 V900 H-20Z" fill="#7cc75a" stroke="#4a2c1a" stroke-width="6"/>
+  <g id="bushes"></g>
+  <g id="flowers"></g>
+</svg>
+
+<header>
+  <h1>Leo the Lion</h1>
+  <div class="tools">
+    <button id="soundBtn" type="button" aria-pressed="true">Sound on</button>
+    <button id="fsBtn" type="button">Full screen</button>
+  </div>
+</header>
+
+<svg id="lion" viewBox="0 0 400 430" role="button" tabindex="0" aria-label="Leo the lion. Tap him to see what he does.">
+  <defs>
+    <symbol id="p-heart" viewBox="-16 -16 32 32" overflow="visible"><path d="M0 12 C-22 -2 -14 -18 0 -8 C14 -18 22 -2 0 12Z" fill="#ff5a7a" stroke="#4a2c1a" stroke-width="3" stroke-linejoin="round"/></symbol>
+    <symbol id="p-note" viewBox="-16 -16 32 32" overflow="visible"><path d="M-4 8 V-12 L10 -15 V5" fill="none" stroke="#4a2c1a" stroke-width="4" stroke-linejoin="round"/><ellipse cx="-9" cy="9" rx="6" ry="5" fill="#4a2c1a"/><ellipse cx="5" cy="6" rx="6" ry="5" fill="#4a2c1a"/></symbol>
+    <symbol id="p-z" viewBox="-16 -16 32 32" overflow="visible"><path d="M-9 -9 H9 L-9 9 H9" fill="none" stroke="#5b6fd8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="p-star" viewBox="-16 -16 32 32" overflow="visible"><path d="M0 -14 Q3 -3 14 0 Q3 3 0 14 Q-3 3 -14 0 Q-3 -3 0 -14Z" fill="#ffe14d" stroke="#4a2c1a" stroke-width="3" stroke-linejoin="round"/></symbol>
+    <symbol id="p-puff" viewBox="-16 -16 32 32" overflow="visible"><circle r="12" fill="#fff" stroke="#4a2c1a" stroke-width="3"/></symbol>
+    <symbol id="p-bang" viewBox="-16 -16 32 32" overflow="visible"><path d="M-4 -16 H4 L2 4 H-2Z" fill="#ff4d4d" stroke="#4a2c1a" stroke-width="3" stroke-linejoin="round"/><circle cy="11" r="4" fill="#ff4d4d" stroke="#4a2c1a" stroke-width="3"/></symbol>
+    <symbol id="p-drop" viewBox="-16 -16 32 32" overflow="visible"><path d="M0 -12 Q10 4 0 10 Q-10 4 0 -12Z" fill="#8fd3ff" stroke="#4a2c1a" stroke-width="3"/></symbol>
+  </defs>
+  <ellipse cx="200" cy="410" rx="120" ry="13" fill="#4a2c1a" opacity=".18" id="shadow"/>
+  <g id="all">
+    <g id="tail">
+      <path d="M262 380 C318 386 340 352 328 318" fill="none" stroke="var(--ink)" stroke-width="24" stroke-linecap="round"/>
+      <path d="M262 380 C318 386 340 352 328 318" fill="none" stroke="var(--face)" stroke-width="12" stroke-linecap="round"/>
+      <path id="tuft" fill="var(--mane)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+    </g>
+    <path d="M150 258 C126 300 116 360 124 400 L276 400 C284 360 274 300 250 258Z" fill="var(--face)" stroke="var(--ink)" stroke-width="6" stroke-linejoin="round"/>
+    <ellipse cx="140" cy="380" rx="36" ry="27" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/>
+    <ellipse cx="260" cy="380" rx="36" ry="27" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/>
+    <ellipse cx="120" cy="402" rx="25" ry="11" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/>
+    <ellipse cx="280" cy="402" rx="25" ry="11" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/>
+    <g id="arms">
+      <g id="armL"><path class="ao" fill="none" stroke="var(--ink)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><path class="ai" fill="none" stroke="var(--face)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/><path class="toe" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
+      <g id="armR"><path class="ao" fill="none" stroke="var(--ink)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><path class="ai" fill="none" stroke="var(--face)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/><path class="toe" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
+    </g>
+    <g id="head">
+      <g id="mane"><path id="maneP" fill="var(--mane)" stroke="var(--ink)" stroke-width="6" stroke-linejoin="round"/></g>
+      <g id="earL"><circle cx="128" cy="110" r="28" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/><circle cx="128" cy="110" r="14" fill="#e59852"/></g>
+      <g id="earR"><circle cx="272" cy="110" r="28" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/><circle cx="272" cy="110" r="14" fill="#e59852"/></g>
+      <ellipse cx="200" cy="184" rx="84" ry="74" fill="var(--face)" stroke="var(--ink)" stroke-width="6"/>
+      <path d="M176 112 Q186 134 200 118 Q214 134 224 112 Q200 104 176 112Z" fill="var(--mane)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse id="blushL" cx="142" cy="212" rx="17" ry="10" fill="#f28a6a" opacity=".55"/>
+      <ellipse id="blushR" cx="258" cy="212" rx="17" ry="10" fill="#f28a6a" opacity=".55"/>
+      <ellipse cx="200" cy="216" rx="37" ry="27" fill="var(--cream)"/>
+      <g id="brows"></g>
+      <g id="eyeL" transform="translate(164 180)"></g>
+      <g id="eyeR" transform="translate(236 180)"></g>
+      <g id="mouth" transform="translate(200 204)"></g>
+      <path d="M188 198 Q200 194 212 198 Q208 210 200 212 Q192 210 188 198Z" fill="var(--ink)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+      <g id="shades" style="display:none">
+        <path d="M136 168 H264" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+        <rect x="134" y="166" width="56" height="32" rx="12" fill="#141414"/>
+        <rect x="210" y="166" width="56" height="32" rx="12" fill="#141414"/>
+        <path d="M144 176 h14 M220 176 h14" stroke="#4d5f86" stroke-width="5" stroke-linecap="round"/>
+        <path id="glint" d="M252 160 v26 M239 173 h26" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0"/>
+      </g>
+      <g id="crown">
+        <path d="M164 74 L158 40 L182 56 L200 30 L218 56 L242 40 L236 74Z" fill="#ffd347" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="158" cy="36" r="6" fill="#ffd347" stroke="var(--ink)" stroke-width="4"/>
+        <circle cx="200" cy="26" r="6" fill="#ffd347" stroke="var(--ink)" stroke-width="4"/>
+        <circle cx="242" cy="36" r="6" fill="#ffd347" stroke="var(--ink)" stroke-width="4"/>
+        <circle cx="200" cy="60" r="5" fill="#ff6b6b" stroke="var(--ink)" stroke-width="3"/>
+      </g>
+    </g>
+  </g>
+  <g id="fx"></g>
+</svg>
+
+<div class="hint" id="hint">Tap Leo!</div>
+<div class="bubble" id="bubble" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const INK = '#4a2c1a';
+
+/* ---------- shapes built in code ---------- */
+function scallop(cx, cy, R, n, rot = 0) {
+  let d = '';
+  for (let i = 0; i <= n; i++) {
+    const a = rot + (i / n) * Math.PI * 2 - Math.PI / 2, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+    if (i === 0) d += `M${x.toFixed(1)} ${y.toFixed(1)}`;
+    else d += ` A${(R * Math.sin(Math.PI / n)).toFixed(1)} ${(R * Math.sin(Math.PI / n)).toFixed(1)} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }
+  return d + 'Z';
+}
+$('maneP').setAttribute('d', scallop(200, 176, 100, 16));
+$('tuft').setAttribute('d', scallop(330, 310, 15, 7, .3));
+// scenery: jungle trees, bushes, flowers
+(() => {
+  const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+  const trees = $('trees');
+  for (const [x, s] of [[150, 1.1], [420, .8], [1180, .85], [1460, 1.15]]) {
+    const g = el('g', { transform: `translate(${x} 660) scale(${s})` }, trees);
+    el('path', { d: 'M-16 0 Q-10 -150 -6 -250 H8 Q12 -150 18 0Z', fill: '#a8673a', stroke: INK, 'stroke-width': 6, 'stroke-linejoin': 'round' }, g);
+    for (const [lx, ly, r] of [[-70, -250, 60], [70, -255, 60], [0, -300, 70], [-30, -220, 50], [40, -215, 50]]) el('circle', { cx: lx, cy: ly, r, fill: '#4fae4a', stroke: INK, 'stroke-width': 6 }, g);
+    for (const [lx, ly, r] of [[-60, -262, 22], [60, -268, 22], [0, -318, 26]]) el('circle', { cx: lx, cy: ly, r, fill: '#6cc65e' }, g);
+  }
+  const bushes = $('bushes');
+  for (const [x, y, r] of [[60, 760, 70], [330, 790, 50], [1270, 790, 55], [1540, 760, 75], [700, 880, 40], [960, 885, 44]]) el('path', { d: scallop(x, y, r, 9), fill: '#3f9a42', stroke: INK, 'stroke-width': 6, 'stroke-linejoin': 'round' }, bushes);
+  const fl = $('flowers');
+  for (let i = 0; i < 26; i++) {
+    const x = (i * 211) % 1600, y = 735 + (i * 53) % 150, col = ['#ff7aa2', '#fff', '#ffd347', '#b48cff'][i % 4];
+    el('circle', { cx: x, cy: y, r: 7, fill: col, stroke: INK, 'stroke-width': 3 }, fl);
+    el('circle', { cx: x, cy: y, r: 2.5, fill: '#ffb347' }, fl);
+  }
+})();
+
+/* ---------- faces ---------- */
+const EYES = {
+  dot: '<ellipse rx="11" ry="13" fill="#4a2c1a"/><circle cx="-4" cy="-5" r="4" fill="#fff"/><circle cx="4" cy="4" r="1.8" fill="#fff"/>',
+  happy: '<path d="M-13 5 Q0 -12 13 5" fill="none" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round"/>',
+  closed: '<path d="M-13 -2 Q0 11 13 -2" fill="none" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round"/>',
+  blink: '<path d="M-12 2 H12" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round"/>',
+  squeezeL: '<path d="M-11 -10 L9 0 L-11 10" fill="none" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>',
+  squeezeR: '<path d="M11 -10 L-9 0 L11 10" fill="none" stroke="#4a2c1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>',
+  heart: '<path d="M0 13 C-24 -2 -15 -20 0 -9 C15 -20 24 -2 0 13Z" fill="#ff4d6d" stroke="#4a2c1a" stroke-width="4" stroke-linejoin="round"/><circle cx="-7" cy="-6" r="3" fill="#fff"/>',
+  wide: '<circle r="17" fill="#fff" stroke="#4a2c1a" stroke-width="5"/><circle r="8" fill="#4a2c1a"/><circle cx="-3" cy="-3" r="3" fill="#fff"/>',
+};
+const MOUTHS = {
+  smile: '<path d="M0 8 V12 M-16 12 Q-8 22 0 12 Q8 22 16 12" fill="none" stroke="#4a2c1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>',
+  grin: '<path d="M-20 10 Q0 44 20 10 Q0 16 -20 10Z" fill="#9a3434" stroke="#4a2c1a" stroke-width="5" stroke-linejoin="round"/><ellipse cy="27" rx="8" ry="5" fill="#ff8fa3"/>',
+  tongue: '<path d="M0 8 V12 M-16 12 Q-8 22 0 12 Q8 22 16 12" fill="none" stroke="#4a2c1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M-3 17 Q-8 32 2 32 Q11 31 7 17Z" fill="#ff8fa3" stroke="#4a2c1a" stroke-width="4" stroke-linejoin="round"/>',
+  roar: '<path d="M-32 10 Q0 76 32 10 Q0 20 -32 10Z" fill="#7a2222" stroke="#4a2c1a" stroke-width="5" stroke-linejoin="round"/><path d="M-24 12 L-19 26 L-14 14Z M24 12 L19 26 L14 14Z" fill="#fff" stroke="#4a2c1a" stroke-width="3" stroke-linejoin="round"/><ellipse cy="40" rx="13" ry="7" fill="#ff8fa3"/>',
+  o: '<ellipse cy="22" rx="9" ry="11" fill="#7a2222" stroke="#4a2c1a" stroke-width="5"/>',
+  small: '<path d="M-7 18 Q0 22 7 18" fill="none" stroke="#4a2c1a" stroke-width="5" stroke-linecap="round"/>',
+  smirk: '<path d="M-14 16 Q2 24 17 9" fill="none" stroke="#4a2c1a" stroke-width="5" stroke-linecap="round"/>',
+};
+const BROWS = { mad: '<path d="M140 150 L178 162 M260 150 L222 162" stroke="#4a2c1a" stroke-width="7" stroke-linecap="round"/>' };
+const faceCache = {};
+function setPart(id, html) { if (faceCache[id] !== html) { $(id).innerHTML = html; faceCache[id] = html; } }
+
+/* ---------- particles ---------- */
+const fx = $('fx'), parts = [];
+function spawn(kind, x, y, vx, vy, life, opts = {}) {
+  const u = document.createElementNS(NS, 'use');
+  u.setAttribute('href', '#p-' + kind); u.setAttribute('width', 32); u.setAttribute('height', 32); u.setAttribute('x', -16); u.setAttribute('y', -16);
+  fx.appendChild(u);
+  parts.push({ u, x, y, vx, vy, life, born: performance.now(), s: opts.s || 1, grow: opts.grow || 0, g: opts.g || 0, vr: opts.vr || (Math.random() - .5) * 60 });
+}
+function ring(x, y) {
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('fill', 'none'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', 8);
+  fx.appendChild(c); parts.push({ ring: c, born: performance.now(), life: .7 });
+}
+function stepParts(now, dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i], age = (now - q.born) / 1000;
+    if (age > q.life) { (q.u || q.ring).remove(); parts.splice(i, 1); continue; }
+    if (q.ring) { const k = age / q.life; q.ring.setAttribute('r', 20 + k * 190); q.ring.setAttribute('opacity', (1 - k) * .8); q.ring.setAttribute('stroke-width', 10 - k * 7); continue; }
+    q.vy += q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+    const s = q.s * (1 + q.grow * age) * Math.min(1, age * 8);
+    q.u.setAttribute('transform', `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)}) rotate(${(q.vr * age).toFixed(1)}) scale(${s.toFixed(3)})`);
+    q.u.setAttribute('opacity', Math.min(1, (q.life - age) * 3).toFixed(2));
+  }
+}
+
+/* ---------- the moves ---------- */
+const EMOTES = [
+  { id: 'roar', dur: 2400, say: 'ROAR!' },
+  { id: 'giggle', dur: 2000, say: 'hee hee!' },
+  { id: 'wink', dur: 1800, say: 'hey there!' },
+  { id: 'love', dur: 2600, say: 'aww!' },
+  { id: 'sleepy', dur: 3400, say: 'zzz...' },
+  { id: 'surprised', dur: 1800, say: 'WHOA!' },
+  { id: 'sneeze', dur: 2800, say: 'ah... ah...' },
+  { id: 'cool', dur: 2800, say: 'too cool!' },
+  { id: 'dance', dur: 3200, say: 'dance party!' },
+  { id: 'shy', dur: 2600, say: 'oh... hi!' },
+  { id: 'floss', dur: 3200, say: 'floss!' },
+  { id: 'dab', dur: 2200, say: 'dab!' },
+];
+let cur = null, last = -1, nextSpawn = 0, nextBlink = performance.now() + 2500;
+const ease = (u) => 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 3);
+function pose(now) {
+  const t = now / 1000, s = Math.sin, P = Math.PI;
+  const p = { x: 0, y: 0, sx: 1, sy: 1 + s(t * 2.2) * .008, hx: 0, hy: 0, hr: s(t * .9) * 1.5, mane: 1, maneR: 0, tail: s(t * 2) * 8, al: 0, ar: 0, al2: null, ar2: null, lL: [43, 43], rL: [43, 43], earL: 0, earR: 0,
+    cx: 0, cy: 0, cr: 0, eyes: 'dot', eyesR: null, mouth: 'smile', brows: '', blush: .55, shades: null, glint: 0, shake: 0 };
+  if (!cur) {
+    if (now > nextBlink) { p.eyes = 'blink'; if (now > nextBlink + 130) nextBlink = now + 2500 + Math.random() * 2500; }
+    if ((t % 7) < .25) p.earR = s((t % 7) / .25 * P) * 14;
+    return p;
+  }
+  const e = cur.e, k = Math.min(1, (now - cur.start) / e.dur);
+  const every = (ms, fn) => { if (now >= nextSpawn) { nextSpawn = now + ms; fn(); } };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  switch (e.id) {
+    case 'roar':
+      if (k < .18) { p.sy = .95; p.hy = 8; p.eyes = 'happy'; p.mouth = 'small'; p.tail = -10; }
+      else if (k < .85) {
+        const w = s(t * 40);
+        p.mouth = 'roar'; p.eyes = 'squeezeL'; p.eyesR = 'squeezeR'; p.brows = BROWS.mad; p.hy = -8; p.hx = w * 1.5; p.sy = 1.04; p.sx = 1.03;
+        p.mane = 1.12 + s(t * 30) * .03; p.maneR = w * 2; p.tail = 25 + w * 6; p.shake = 6; p.cy = -6 + w; p.earL = -12; p.earR = 12;
+        every(240, () => ring(200, 236));
+      }
+      break;
+    case 'giggle': {
+      const b = Math.abs(s(k * P * 9));
+      p.eyes = 'happy'; p.mouth = 'grin'; p.blush = .9; p.y = -b * 8; p.hr = s(k * P * 9) * 4; p.tail = s(t * 12) * 18; p.al = 12; p.ar = -12;
+      every(380, () => spawn('star', rnd(110, 290), rnd(70, 130), rnd(-30, 30), -40, .9, { s: .9 }));
+      break;
+    }
+    case 'wink': {
+      const on = k > .1 && k < .85;
+      p.eyesR = on ? 'squeezeR' : null; p.mouth = on ? 'tongue' : 'smile'; p.hr = on ? 9 : 0; p.hx = on ? 4 : 0; p.earR = on ? 10 : 0; p.blush = .8; p.cr = on ? 8 : 0;
+      if (k > .12 && k < .2) every(400, () => spawn('star', 268, 150, 50, -50, .9, { s: 1.3, vr: 200 }));
+      break;
+    }
+    case 'love':
+      p.eyes = 'heart'; p.mouth = 'smile'; p.blush = 1; p.hr = s(k * P * 3) * 7; p.y = -Math.abs(s(k * P * 6)) * 4; p.tail = s(t * 6) * 16;
+      every(230, () => spawn('heart', rnd(110, 290), rnd(60, 120), rnd(-25, 25), rnd(-70, -45), 1.5, { s: rnd(.9, 1.5), vr: rnd(-40, 40) }));
+      break;
+    case 'sleepy': {
+      const d = ease(k / .2) * (k > .9 ? 1 - (k - .9) / .1 : 1);
+      p.eyes = k > .08 && k < .93 ? 'closed' : 'happy'; p.mouth = 'small'; p.hy = 12 * d + s(t * 1.6) * 2 * d; p.hr = 10 * d; p.sy = 1 - .02 * d + s(t * 1.6) * .02 * d;
+      p.cr = 16 * d; p.cx = 10 * d; p.cy = 4 * d; p.tail = 2; p.earL = -10 * d; p.earR = 10 * d; p.blush = .4;
+      if (k > .15 && k < .85) every(700, () => spawn('z', 285, 115, rnd(20, 35), -40, 1.8, { s: 1, grow: .6, vr: 0 }));
+      break;
+    }
+    case 'surprised': {
+      const j = k < .45 ? s(k / .45 * P) : 0;
+      p.eyes = 'wide'; p.mouth = 'o'; p.y = -70 * j; p.sy = k < .45 ? 1.04 : 1 - (k < .55 ? s((k - .45) / .1 * P) * .06 : 0); p.cy = -24 * j; p.earL = -16; p.earR = 16; p.tail = 30; p.al = 20 * j; p.ar = -20 * j; p.blush = .3;
+      if (k < .1) every(800, () => { spawn('bang', 118, 70, -40, -60, 1, { s: 1.4, vr: 0 }); spawn('bang', 282, 70, 40, -60, 1, { s: 1.4, vr: 0 }); });
+      break;
+    }
+    case 'sneeze':
+      if (k < .45) { const b = ease(k / .45); p.hy = -10 * b; p.hr = -6 * b; p.eyes = k < .2 ? 'dot' : 'happy'; p.mouth = 'o'; p.earL = -8 * b; p.earR = 8 * b; }
+      else if (k < .85) {
+        const u = (k - .45) / .4, hit = u < .15;
+        p.eyes = 'squeezeL'; p.eyesR = 'squeezeR'; p.mouth = 'grin'; p.hy = hit ? 14 : 8 * (1 - u); p.hr = hit ? 6 : 0; p.sy = hit ? .93 : 1; p.shake = hit ? 5 : 0;
+        p.cy = -110 * 4 * u * (1 - u); p.cr = 360 * u; p.tail = 30;
+        if (hit) every(40, () => spawn('puff', rnd(170, 230), 240, rnd(-160, 160), rnd(-60, 60), .8, { s: rnd(.8, 1.6), grow: 1.2 }));
+      } else { p.eyes = 'happy'; p.mouth = 'tongue'; p.blush = .9; }
+      break;
+    case 'cool': {
+      const drop = ease((k - .08) / .25);
+      p.shades = -150 * (1 - drop); p.glint = k > .4 && k < .58 ? s((k - .4) / .18 * P) : 0; p.mouth = k > .3 ? 'smirk' : 'smile'; p.hr = k > .3 ? -7 : 0; p.cr = k > .3 ? -10 : 0; p.blush = .3; p.tail = s(t * 3) * 10 + 10;
+      if (k > .42 && k < .5) every(500, () => spawn('star', 262, 166, 30, -40, .8, { s: 1.4, vr: 120 }));
+      break;
+    }
+    case 'dance': {
+      const b = s(k * P * 10);
+      p.eyes = 'happy'; p.mouth = 'grin'; p.y = -Math.abs(b) * 14; p.hr = b * 10; p.x = b * 6; p.al = 115 + b * 22; p.ar = -115 + b * 22; p.tail = b * 30; p.blush = .8; p.earL = b * 8; p.earR = b * 8;
+      every(320, () => spawn('note', Math.random() < .5 ? rnd(70, 120) : rnd(280, 330), rnd(130, 200), rnd(-20, 20), -60, 1.3, { s: 1.2 }));
+      break;
+    }
+    case 'shy': {
+      const a = ease(k / .2) * (k > .85 ? 1 - (k - .85) / .15 : 1);
+      p.al = -174 * a; p.ar = 174 * a; p.hr = 8 * a; p.hy = 8 * a; p.eyes = 'happy'; p.mouth = 'small'; p.blush = .55 + .45 * a; p.tail = s(t * 4) * 6; p.earL = -8 * a; p.earR = 8 * a;
+      if (k > .3 && k < .7) every(900, () => spawn('drop', 286, 140, 10, 30, 1, { s: 1.2, vr: 0 }));
+      break;
+    }
+    case 'floss': {
+      const f = s(k * P * 12);
+      p.x = f * 14; p.al = f * 42; p.ar = f * 42; p.hr = -f * 5; p.eyes = 'happy'; p.mouth = 'tongue'; p.tail = -f * 25; p.y = -Math.abs(f) * 4; p.blush = .8;
+      every(380, () => spawn('note', Math.random() < .5 ? rnd(70, 120) : rnd(280, 330), rnd(130, 200), rnd(-20, 20), -60, 1.3, { s: 1.2 }));
+      break;
+    }
+    case 'dab': {
+      const a = ease(k / .12) * (k > .86 ? 1 - (k - .86) / .14 : 1), L = (u, v) => u + (v - u) * a;
+      // left arm bends: upper arm out to the side, elbow, forearm back across his face
+      p.al = L(0, 112); p.al2 = L(0, -140); p.lL = [L(43, 88), L(43, 118)];
+      // right arm shoots straight up and out
+      p.ar = L(0, -128); p.ar2 = L(0, -128); p.rL = [L(43, 72), L(43, 72)];
+      p.hr = -26 * a; p.hx = -10 * a; p.hy = 28 * a; p.eyes = a > .5 ? 'closed' : 'dot'; p.mouth = 'smile'; p.tail = 24 * a; p.cr = -18 * a; p.cx = -6 * a;
+      if (a > .9) every(200, () => spawn('star', rnd(330, 370), rnd(180, 220), rnd(20, 60), rnd(-60, -20), .6, { s: rnd(.8, 1.3) }));
+      break;
+    }
+  }
+  return p;
+}
+
+/* ---------- drawing ---------- */
+const G = { all: $('all'), head: $('head'), mane: $('mane'), tail: $('tail'), armL: $('armL'), armR: $('armR'), arms: $('arms'), earL: $('earL'), earR: $('earR'), crown: $('crown'), shades: $('shades'), glint: $('glint'), shadow: $('shadow') };
+let armsFront = false;
+// an arm is shoulder -> elbow -> paw; angles in degrees, 0 = hanging straight down
+function arm(g, sx, sy, a1, a2, [L1, L2]) {
+  const dir = (deg) => { const r = deg * Math.PI / 180; return [-Math.sin(r), Math.cos(r)]; };
+  const [ux, uy] = dir(a1), [vx, vy] = dir(a2);
+  const ex = sx + ux * L1, ey = sy + uy * L1, px = ex + vx * L2, py = ey + vy * L2, nx = -vy, ny = vx;
+  const d = `M${sx} ${sy} L${ex.toFixed(1)} ${ey.toFixed(1)} L${px.toFixed(1)} ${py.toFixed(1)}`;
+  g.children[0].setAttribute('d', d); g.children[1].setAttribute('d', d);
+  const toe = (o) => `M${(px + vx * 6 + nx * o).toFixed(1)} ${(py + vy * 6 + ny * o).toFixed(1)} l${(vx * 8).toFixed(1)} ${(vy * 8).toFixed(1)}`;
+  g.children[2].setAttribute('d', toe(-6) + ' ' + toe(6));
+}
+function render(p, now) {
+  const sh = reduce ? 0 : p.shake, ox = (Math.random() - .5) * sh * 2, oy = (Math.random() - .5) * sh * 2;
+  G.all.setAttribute('transform', `translate(${(p.x + ox).toFixed(1)} ${(p.y + oy).toFixed(1)}) translate(200 410) scale(${p.sx.toFixed(3)} ${p.sy.toFixed(3)}) translate(-200 -410)`);
+  G.shadow.setAttribute('rx', (120 * (1 + p.y / 300)).toFixed(1));
+  G.head.setAttribute('transform', `translate(${p.hx.toFixed(1)} ${p.hy.toFixed(1)}) rotate(${p.hr.toFixed(2)} 200 290)`);
+  G.mane.setAttribute('transform', `rotate(${p.maneR.toFixed(2)} 200 176) translate(200 176) scale(${p.mane.toFixed(3)}) translate(-200 -176)`);
+  G.tail.setAttribute('transform', `rotate(${p.tail.toFixed(2)} 262 380)`);
+  arm(G.armL, 178, 303, p.al, p.al2 == null ? p.al : p.al2, p.lL);
+  arm(G.armR, 222, 303, p.ar, p.ar2 == null ? p.ar : p.ar2, p.rL);
+  G.earL.setAttribute('transform', `rotate(${p.earL.toFixed(2)} 128 132)`);
+  G.earR.setAttribute('transform', `rotate(${p.earR.toFixed(2)} 272 132)`);
+  G.crown.setAttribute('transform', `translate(${p.cx.toFixed(1)} ${p.cy.toFixed(1)}) rotate(${p.cr.toFixed(2)} 200 56)`);
+  const front = Math.abs(p.al) > 45 || Math.abs(p.ar) > 45;
+  if (front !== armsFront) { armsFront = front; if (front) G.all.appendChild(G.arms); else G.all.insertBefore(G.arms, G.head); }
+  setPart('eyeL', EYES[p.eyes]); setPart('eyeR', EYES[p.eyesR || p.eyes]); setPart('mouth', MOUTHS[p.mouth]); setPart('brows', p.brows);
+  $('blushL').setAttribute('opacity', p.blush); $('blushR').setAttribute('opacity', p.blush);
+  if (p.shades == null) G.shades.style.display = 'none';
+  else { G.shades.style.display = ''; G.shades.setAttribute('transform', `translate(0 ${p.shades.toFixed(1)})`); G.glint.setAttribute('opacity', p.glint.toFixed(2)); }
+}
+
+/* ---------- speech bubble ---------- */
+const bubble = $('bubble'), lionSvg = $('lion');
+function showBubble(text) {
+  bubble.textContent = text; bubble.hidden = false;
+  const m = lionSvg.getScreenCTM(), pt = lionSvg.createSVGPoint(); pt.x = 268; pt.y = 40;
+  const q = pt.matrixTransform(m), w = bubble.offsetWidth;
+  bubble.style.left = Math.max(8, Math.min(innerWidth - w - 8, q.x)) + 'px';
+  bubble.style.top = Math.max(bubble.offsetHeight + 8, q.y) + 'px';
+  bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+}
+
+/* ---------- sounds (made with code, no files) ---------- */
+let ac = null, soundOn = true;
+function actx() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) { ac = null; } } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+function tone(a, type, f0, f1, t0, dur, vol) { const o = a.createOscillator(), g = a.createGain(), T = a.currentTime + t0; o.type = type; o.frequency.setValueAtTime(f0, T); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), T + dur); g.gain.setValueAtTime(.0001, T); g.gain.exponentialRampToValueAtTime(vol, T + .02); g.gain.exponentialRampToValueAtTime(.0001, T + dur); o.connect(g).connect(a.destination); o.start(T); o.stop(T + dur + .05); }
+function noise(a, t0, dur, vol, f0, f1) { const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; const src = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(), T = a.currentTime + t0; src.buffer = buf; fl.type = 'lowpass'; fl.frequency.setValueAtTime(f0, T); fl.frequency.exponentialRampToValueAtTime(f1, T + dur); g.gain.setValueAtTime(.0001, T); g.gain.exponentialRampToValueAtTime(vol, T + .05); g.gain.exponentialRampToValueAtTime(.0001, T + dur); src.connect(fl).connect(g).connect(a.destination); src.start(T); src.stop(T + dur + .05); }
+function sound(id) {
+  if (!soundOn) return; const a = actx(); if (!a) return;
+  const notes = (list, type, step, vol, t0 = 0) => list.forEach((f, i) => tone(a, type, f, f, t0 + i * step, step * .9, vol));
+  switch (id) {
+    case 'roar': noise(a, .42, 1.5, .55, 1800, 200); tone(a, 'sawtooth', 160, 70, .42, 1.5, .2); tone(a, 'sawtooth', 110, 55, .42, 1.5, .15); break;
+    case 'giggle': notes([880, 1040, 880, 1180, 980, 1320], 'square', .1, .05); break;
+    case 'wink': tone(a, 'sine', 1400, 2600, .2, .22, .14); break;
+    case 'love': notes([660, 880, 1100], 'sine', .2, .14); break;
+    case 'sleepy': noise(a, .3, 1, .12, 600, 260); noise(a, 1.7, 1, .1, 400, 200); break;
+    case 'surprised': tone(a, 'square', 280, 1300, 0, .32, .07); break;
+    case 'sneeze': tone(a, 'sine', 480, 640, 0, .5, .06); tone(a, 'sine', 520, 720, .6, .5, .06); noise(a, 1.26, .5, .5, 5200, 900); break;
+    case 'cool': notes([523, 659, 784, 1047], 'triangle', .12, .13, .2); break;
+    case 'dance': notes([523, 659, 784, 659, 523, 659, 784, 1047, 784, 1047], 'square', .16, .045); break;
+    case 'shy': tone(a, 'sine', 720, 480, 0, .35, .09); break;
+    case 'floss': notes([392, 392, 523, 392, 392, 523, 587, 523, 392, 392, 523, 659, 587, 523], 'square', .2, .045); break;
+    case 'dab': noise(a, .1, .3, .3, 3200, 600); tone(a, 'triangle', 400, 1000, .1, .25, .12); break;
+  }
+}
+
+/* ---------- controls ---------- */
+function play(i) {
+  const e = EMOTES[i]; last = i; cur = { e, start: performance.now() }; nextSpawn = 0;
+  showBubble(e.say); sound(e.id);
+  if (e.id === 'sneeze') setTimeout(() => { if (cur && cur.e === e) showBubble('ACHOO!'); }, e.dur * .45);
+  $('hint').classList.add('gone');
+}
+function playRandom() { let i; do { i = Math.floor(Math.random() * EMOTES.length); } while (i === last); play(i); }
+lionSvg.addEventListener('click', playRandom);
+lionSvg.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); playRandom(); } });
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];
+document.addEventListener('keydown', (ev) => { const ki = KEYS.indexOf(ev.key); if (ki >= 0) play(ki); });
+$('soundBtn').addEventListener('click', () => { soundOn = !soundOn; $('soundBtn').textContent = soundOn ? 'Sound on' : 'Sound off'; $('soundBtn').setAttribute('aria-pressed', String(soundOn)); });
+$('fsBtn').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (err) { $('fsBtn').hidden = true; } });
+
+/* ---------- loop ---------- */
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  if (cur && now - cur.start > cur.e.dur) { cur = null; bubble.hidden = true; }
+  render(pose(now), now); stepParts(now, dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__leo = { play };
+})();
+</script>
+</body>
+</html>
